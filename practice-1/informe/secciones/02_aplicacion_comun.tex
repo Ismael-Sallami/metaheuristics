@@ -1,0 +1,92 @@
+\newpage
+\section{Aplicación de los Algoritmos Empleados al Problema}
+\label{sec:aplicacion_comun}
+
+Antes de abordar la lógica interna de cada metaheurística particular, es imperativo definir la arquitectura común que subyace a todos los algoritmos desarrollados. Esta sección detalla cómo se mapea el problema financiero al dominio computacional, estableciendo la representación del espacio de búsqueda, la evaluación de la función objetivo y el mecanismo genérico de reparación de soluciones.
+
+\subsection{Esquema de Representación de las Soluciones}
+Dado un mercado con $N$ activos financieros, cualquier solución candidata se representa computacionalmente como un vector unidimensional de números reales en doble precisión: 
+$w = [w_1, w_2, \dots, w_N]$. 
+
+Cada componente $w_i$ codifica la fracción del presupuesto total que se asignará a la empresa $i$-ésima. Esta codificación continua exige un riguroso control de validez en cada iteración de los algoritmos para garantizar que:
+\begin{enumerate}
+    \item La suma total del vector converja a $1.0$ (aplicando una tolerancia computacional $\epsilon = 10^{-8}$ para absorber la imprecisión de la aritmética de coma flotante).
+    \item Cada peso individual respete los umbrales legales del mercado: $w_i = 0$ (exclusión del activo) o $w_i \in [lo, hi]$.
+\end{enumerate}
+
+\subsection{Evaluación de la Función Objetivo}
+La función objetivo es transversal a todos los algoritmos. Dado que el beneficio acumulado se ha precalculado logarítmicamente durante la carga de datos para optimizar el rendimiento, la evaluación de cualquier cartera $w$ se realiza mediante el Algoritmo \ref{alg:fitness}.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Vector de pesos $w$ de tamaño $N$, Vector de beneficios acumulados $B$, Matriz de covarianzas $\Sigma$, factor $\lambda$}
+\KwOut{Valor real de la función de evaluación (Fitness)}
+ $beneficio \leftarrow 0.0$\;
+ $riesgo \leftarrow 0.0$\;
+ \tcp{Cálculo del beneficio esperado}
+ \For{$i \leftarrow 1$ \KwTo $N$}{
+  $beneficio \leftarrow beneficio + (w_i \cdot B_i)$\;
+ }
+ \tcp{Cálculo del riesgo (Varianza de la cartera)}
+ \For{$i \leftarrow 1$ \KwTo $N$}{
+  \For{$j \leftarrow 1$ \KwTo $N$}{
+   $riesgo \leftarrow riesgo + (w_i \cdot w_j \cdot \Sigma_{ij})$\;
+  }
+ }
+ \Return $beneficio - (\lambda \cdot riesgo)$\;
+ \caption{Evaluación de la Función Objetivo}
+ \label{alg:fitness}
+\end{algorithm}
+
+\subsection{Operador Común de Reparación de Soluciones}
+La exploración del espacio de búsqueda (ya sea mediante mutaciones estocásticas o asignaciones voraces) genera invariablemente vectores que violan las restricciones del problema. Para proyectar estas soluciones inválidas de vuelta al espacio factible, se ha diseñado un operador de reparación determinista, denotado como \texttt{fix(w)}.
+
+Este operador actúa en tres fases: primero, una normalización base; segundo, una poda de límites; y tercero, un bucle de redistribución de excesos o déficits de capital. El Algoritmo \ref{alg:fix} describe formalmente este procedimiento.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Vector de pesos inválido $w$, límites $lo$ y $hi$, tolerancia $\epsilon$}
+\KwOut{Vector de pesos $w$ factible}
+ \tcp{Fase 1: Normalización inicial}
+ $suma \leftarrow \sum_{i=1}^{N} w_i$\;
+ \If{$suma > 0$ y $|suma - 1.0| > \epsilon$}{
+    $w_i \leftarrow w_i / suma \quad \forall i$\;
+ }
+ \tcp{Fase 2: Poda estricta de límites}
+ \For{$i \leftarrow 1$ \KwTo $N$}{
+    \If{$w_i < lo$}{ $w_i \leftarrow 0.0$ }
+    \ElseIf{$w_i > hi$}{ $w_i \leftarrow hi$ }
+ }
+ \tcp{Fase 3: Redistribución iterativa}
+ $suma \leftarrow \sum_{i=1}^{N} w_i$\;
+ \While{$|suma - 1.0| > \epsilon$}{
+    $\delta \leftarrow 1.0 - suma$\;
+    \eIf{$\delta > 0$}{
+        \tcp{Falta capital: repartir entre activos sin saturar}
+        $C \leftarrow \{i \mid 0 < w_i < hi\}$\;
+        \eIf{$C \neq \emptyset$}{
+            $incremento \leftarrow \delta / |C|$\;
+            \For{$i \in C$}{
+                $w_i \leftarrow w_i + \min(incremento, hi - w_i)$\;
+            }
+        }{
+            \tcp{Retorno: no hay activos con margen}
+            Seleccionar un índice $k$ aleatorio donde $w_k == 0$\;
+            $w_k \leftarrow lo$\;
+        }
+    }{
+        \tcp{Sobra capital: recortar de activos activos}
+        $C \leftarrow \{i \mid w_i > lo\}$\;
+        $decremento \leftarrow |\delta| / |C|$\;
+        \For{$i \in C$}{
+            $w_i \leftarrow w_i - \min(decremento, w_i - lo)$\;
+        }
+    }
+    $suma \leftarrow \sum_{i=1}^{N} w_i$\;
+ }
+ \Return $w$\;
+ \caption{Operador de Reparación \texttt{fix(w)}}
+ \label{alg:fix}
+\end{algorithm}
+
+La inclusión de la fase de ``Retorno'' garantiza matemáticamente que el algoritmo nunca sufra un colapso por falta de liquidez legal, asegurando la factibilidad sin importar la severidad de la perturbación inicial.

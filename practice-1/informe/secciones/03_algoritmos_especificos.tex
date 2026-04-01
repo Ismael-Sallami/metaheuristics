@@ -1,0 +1,111 @@
+\newpage
+\section{Estructura de los Métodos de Búsqueda}
+\label{sec:algoritmos}
+
+Una vez definidos los operadores comunes y la representación del problema, en esta sección se detalla la estructura algorítmica específica de las tres metaheurísticas implementadas: Búsqueda Aleatoria, Búsqueda Voraz (Greedy) y Búsqueda Local.
+
+\subsection{Búsqueda Aleatoria (Random Search)}
+La Búsqueda Aleatoria actúa como línea base (\textit{baseline}) estocástica. Su comportamiento consiste en generar iterativamente soluciones al azar dentro del espacio factible, reparándolas y evaluándolas, conservando únicamente la mejor solución encontrada tras agotar el presupuesto de evaluaciones.
+
+El proceso de generación de una solución aleatoria implica asignar a cada peso un valor uniformemente distribuido entre $lo$ y $hi$, inyectar un número aleatorio de ceros (para garantizar la diversificación exigida por el problema) y, finalmente, aplicar el operador de reparación \texttt{fix(w)}.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Problema $P$, máximo de evaluaciones $max\_evals$}
+\KwOut{Mejor solución encontrada $w_{best}$ y su $fitness$}
+ $w_{best} \leftarrow \emptyset$\;
+ $f_{best} \leftarrow -\infty$\;
+ \For{$i \leftarrow 1$ \KwTo $max\_evals$}{
+  $w_{actual} \leftarrow Generar\_Solucion\_Aleatoria(P)$\;
+  \tcp{La generación ya incluye la llamada a fix($w_{actual}$)}
+  $f_{actual} \leftarrow fitness(w_{actual})$\;
+  \If{$i == 1$ \textbf{or} $f_{actual} > f_{best}$}{
+   $w_{best} \leftarrow w_{actual}$\;
+   $f_{best} \leftarrow f_{actual}$\;
+  }
+ }
+ \Return $(w_{best}, f_{best})$\;
+ \caption{Algoritmo de Búsqueda Aleatoria (Random Search)}
+\end{algorithm}
+
+\subsection{Búsqueda Voraz (Greedy Search)}
+A diferencia del método anterior, la Búsqueda Voraz es un algoritmo constructivo y determinista que no emplea el azar. Utiliza el conocimiento del problema (heurística) para tomar decisiones localmente óptimas en la construcción de la cartera.
+
+La función heurística evalúa la rentabilidad individual de un activo penalizada por su covarianza media respecto al resto del mercado. Se calcula como:
+\begin{equation}
+    heur(i) = \left( \sum_{t} \log(1+\mu_{it}) \right) - \lambda \cdot \frac{\sum_{t}\Sigma_{ti}}{T}
+\end{equation}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Problema $P$, presupuesto $1.0$}
+\KwOut{Solución construida $w_{best}$ y su $fitness$}
+ $w_{best} \leftarrow \{0.0, \dots, 0.0\}$\;
+ $suma\_w \leftarrow 0.0$\;
+ Calcular $heur(i)$ para cada empresa $i \in \{1..N\}$\;
+ $Ranking \leftarrow$ Ordenar empresas descendentemente según $heur(i)$\;
+ \For{cada empresa $c$ en $Ranking$}{
+  \If{$suma\_w < 1.0$}{
+   $asignar \leftarrow \min(hi, 1.0 - suma\_w)$\;
+   $w_{best}[c] \leftarrow asignar$\;
+   $suma\_w \leftarrow suma\_w + asignar$\;
+  }
+  \Else{ \textbf{break}\; }
+ }
+ \tcp{Garantizar factibilidad de remanentes (ej. $\min < lo$)}
+ \texttt{fix}($w_{best}$)\;
+ \Return $(w_{best}, fitness(w_{best}))$\;
+ \caption{Algoritmo Constructivo Greedy}
+\end{algorithm}
+\vspace{1cm}
+En relación a la factibilidad de las soluciones construidas por este método voraz, cabe destacar que, dadas las características de las instancias proporcionadas (donde el presupuesto de 1.0 es perfectamente divisible por los límites $hi$ establecidos en el IBEX 35, S\&P 100 y S\&P 500, o bien, lo restante no viola las restricciones), el algoritmo agota el capital exacto sin generar remanentes problemáticos. No obstante, para garantizar la escalabilidad y robustez del código ante cualquier configuración de mercado futuro, se ha invocado el operador general de reparación $fix(w)$ al finalizar la construcción, asegurando matemáticamente la viabilidad de la cartera.\\
+
+Por ejemplo, considérese un escenario donde $1.0 / hi = 12.5$ empresas caben al máximo: las primeras 12 empresas ocupan $12 \times 0.083 = 0.996$, dejando un remanente de $0.004$. Si este remanente se asigna directamente a una empresa sin invocar $fix(w)$, violaría la restricción $0.004 < lo = 0.005$, causando un error. La función $fix(w)$ redistribuye automáticamente los pesos para garantizar que todas las asignaciones (tanto las no nulas como el remanente) respetan los límites $[lo, hi]$, asegurando la validez de cualquier solución independientemente de la configuración del mercado. Comentando el fix o no, el resultado es el mismo, lo dejo para cubrir estos casos y reflejar el estudio del algoritmo. \\
+
+\textit{Nota de diseño sobre los parámetros del algoritmo:}
+En la descripción formal del algoritmo (Greedy), se ha omitido intencionadamente el parámetro de ``evaluaciones máximas'' (\texttt{max\_evals}) que sí está presente en la implementación del código fuente en C++. Esto se debe a la naturaleza determinista y constructiva del método. A diferencia de las búsquedas estocásticas o basadas en trayectorias, el algoritmo Greedy no explora el espacio de búsqueda de forma iterativa, sino que construye una única solución paso a paso utilizando el conocimiento del problema mediante su función heurística. En consecuencia, el concepto de ``presupuesto de evaluaciones'' carece de sentido teórico, y su existencia en el código responde exclusivamente a la necesidad de mantener el polimorfismo al heredar de la interfaz abstracta común de metaheurísticas. Por el contrario, se ha explicitado el parámetro ``presupuesto'' ($1.0$) en el pseudocódigo para representar fielmente la restricción matemática fundamental del problema: la suma de los pesos de la cartera debe alcanzar estrictamente la unidad.
+
+\subsection{Búsqueda Local (Local Search)}
+La Búsqueda Local es un método basado en trayectorias. A partir de una solución inicial generada aleatoriamente, el algoritmo explora su vecindario aplicando un operador de movimiento. Se ha optado por una estrategia de "Primer Mejor" (\textit{First Improvement}), donde el vecindario se baraja aleatoriamente y se acepta el primer vecino que mejore estrictamente el \textit{fitness} actual\footnote{Para ello me he apoyado en la teoría vista tanto en clase de teoría como de prácticas, realizando las modificaciones necesarias.}.
+
+El operador de generación de vecino consiste en seleccionar un par de empresas $(i, j)$, detrayendo un $40\%$ de la inversión actual de la empresa donante $i$ para transferirlo a la receptora $j$. Este movimiento preserva el sumatorio del presupuesto (siempre suma 1), por lo que solo es necesario validar matemáticamente que los nuevos pesos no excedan los límites $[lo, hi]$.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Problema $P$, máximo de evaluaciones $max\_evals$}
+\KwOut{Óptimo local encontrado $w_{actual}$ y su $fitness$}
+ $w_{actual} \leftarrow Generar\_Solucion\_Aleatoria(P)$\;
+ $f_{actual} \leftarrow fitness(w_{actual})$\;
+ $evals \leftarrow 1$\;
+ $Entorno \leftarrow$ Generar todos los pares $(i, j)$ con $i \neq j$\;
+ $mejora \leftarrow true$\;
+ \While{$evals < max\_evals$ \textbf{and} $mejora == true$}{
+  $mejora \leftarrow false$\;
+  BarajarAleatoriamente($Entorno$)\;
+  \For{cada par $(i, j)$ en $Entorno$}{
+   \If{$evals \geq max\_evals$}{ \textbf{break}\; }
+   \If{$w_{actual}[i] == 0.0$}{ \textbf{continue}\; }
+   
+   $trasvase \leftarrow w_{actual}[i] \cdot 0.4$\;
+   $nuevo\_i \leftarrow w_{actual}[i] - trasvase$\;
+   $nuevo\_j \leftarrow w_{actual}[j] + trasvase$\;
+   
+   \If{$(nuevo\_i \in [lo, hi] \lor nuevo\_i \approx 0)$ \textbf{and} $(nuevo\_j \in [lo, hi] \lor nuevo\_j \approx 0)$}{
+    $w_{vecino} \leftarrow w_{actual}$\;
+    $w_{vecino}[i] \leftarrow nuevo\_i$\;
+    $w_{vecino}[j] \leftarrow nuevo\_j$\;
+    $f_{vecino} \leftarrow fitness(w_{vecino})$\;
+    $evals \leftarrow evals + 1$\;
+    
+    \If{$f_{vecino} > f_{actual}$}{
+     $w_{actual} \leftarrow w_{vecino}$\;
+     $f_{actual} \leftarrow f_{vecino}$\;
+     $mejora \leftarrow true$\;
+     \textbf{break}\; \tcp{Primer Mejor encontrado}
+    }
+   }
+  }
+ }
+ \Return $(w_{actual}, f_{actual})$\;
+ \caption{Algoritmo de Búsqueda Local (First Improvement)}
+\end{algorithm}
