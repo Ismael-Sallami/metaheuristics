@@ -1,0 +1,49 @@
+\newpage
+\section{Estructura del Código y Manual de Usuario}
+\label{sec:manual}
+
+La entrega de esta práctica se ha organizado de manera que el código fuente, las dependencias y los scripts de compilación residen en el directorio \texttt{software/}, de forma totalmente independiente a la memoria en formato PDF.
+
+\subsection{Estructura del Directorio \texttt{software/}}
+El código sigue un diseño modular y orientado a objetos en C++, organizado de la siguiente manera:
+\begin{itemize}
+    \item \textbf{Raíz de \texttt{software/}:} Incluye el archivo \texttt{config.cfg}, que actúa como centro de control de la ejecución (semilla, número de evaluaciones, número de ejecuciones, parámetros de los algoritmos y selección de datasets).
+    \item \textbf{\texttt{common/}:} Contiene los ficheros base proporcionados por el framework de la asignatura (interfaces abstractas para la definición de problemas, soluciones y metaheurísticas).
+    \item \textbf{\texttt{inc/}:} Aloja las cabeceras (\texttt{.h}) específicas implementadas para esta práctica (algoritmos Greedy, Random Search, Local Search y la definición de las reglas del problema del Portfolio). En particular, \texttt{inc/config\_reader.h} define la interfaz para el parseo del archivo de configuración.
+    \item \textbf{\texttt{src/}:} Contiene la implementación real en C++ (\texttt{.cpp}) de la lógica de negocio declarada en las cabeceras. En concreto, \texttt{src/config\_reader.cpp} implementa la lectura dinámica de parámetros desde \texttt{config.cfg}.
+    \item \textbf{\texttt{datos\_portfolio\_2526/}:} Directorio que almacena los archivos CSV con los datos históricos de los mercados financieros evaluados.
+    \item \textbf{\texttt{main.cpp}:} Programa principal que ejerce de controlador. Instancia el problema, carga los datos históricos, ejecuta los algoritmos y recolecta las estadísticas.
+    \item \textbf{\texttt{genera\_boxplots.py}:} Script auxiliar en Python encargado de procesar los resultados y generar visualmente las gráficas de dispersión.
+    \item \textbf{\texttt{CMakeLists.txt}:} Archivo de configuración de CMake para automatizar la construcción del binario multiplataforma.
+    \item \textbf{\texttt{LEEME.md}:} Archivo de texto plano con las instrucciones rápidas de despliegue y uso para el evaluador.
+    \item \textbf{\texttt{main}:} Binario compilado que contiene la aplicación principal.
+    \item Archivos de resultados en formato \texttt{.csv} generados tras la ejecución de los algoritmos, con el resumen de tiempos y fitness obtenidos, imágenes de los boxplots en formato \texttt{.png} y otros ficheros del makefile.
+\end{itemize}
+
+\subsection{Manual de Usuario: Compilación y Ejecución}
+El proceso de compilación se ha automatizado por completo mediante las herramientas \texttt{CMake} y \texttt{Make}. Para compilar el código, el usuario únicamente debe situarse en el directorio \texttt{software/} y ejecutar los siguientes comandos en su terminal:
+
+\begin{lstlisting}[language=bash, frame=single]
+cmake .
+make
+\end{lstlisting}
+
+Este proceso resolverá las dependencias y generará un archivo ejecutable final llamado \texttt{main}. 
+
+Para lanzar el programa, basta con ejecutar el binario. Al iniciarse, el sistema lee automáticamente el archivo \texttt{config.cfg}, por lo que no es necesario recompilar para cambiar hiperparámetros o configuración experimental.
+
+\textit{Ejecución estándar (lectura automática de \texttt{config.cfg}):}
+\begin{lstlisting}[language=bash, frame=single]
+./main
+\end{lstlisting}
+
+La semilla también puede pasarse por línea de comandos como mecanismo de sobrescritura rápida. En ese caso, el argumento \texttt{argv[1]} tiene prioridad sobre la semilla definida en el archivo de configuración.
+
+\textit{Ejemplo de ejecución indicando explícitamente la semilla 42:}
+\begin{lstlisting}[language=bash, frame=single]
+./main 42
+\end{lstlisting}
+
+En cuanto a los datasets, \texttt{config.cfg} permite dos modos: ejecutar los tres mercados por defecto (IBEX 35, S\&P 100 y S\&P 500) o activar un mercado personalizado (\textit{Custom Market}) mediante las variables \texttt{USE\_CUSTOM\_MARKET}, \texttt{CUSTOM\_NAME}, \texttt{CUSTOM\_PATH}, \texttt{CUSTOM\_LO} y \texttt{CUSTOM\_HI}. 
+
+Al finalizar su ejecución, el binario mostrará un resumen de los tiempos de ejecución y la mejor solución (\textit{fitness}) por la salida estándar, y volcará automáticamente los datos a archivos \texttt{.csv}. Posteriormente, basta con invocar el script \texttt{python3 genera\_boxplots.py} para obtener las gráficas de caja en formato \texttt{.png}.
