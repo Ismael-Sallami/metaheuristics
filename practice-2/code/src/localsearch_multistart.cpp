@@ -16,7 +16,7 @@ ResultMH<double> LocalSearchMultiStart::optimize(Problem<double> &problem, int m
     
     // Keep track of the best solution found across all starts
     tSolution<double> global_best_sol;
-    tFitness global_best_fitness = -1e9; // Initialize very low
+    tFitness global_best_fitness = 1e9;
 
     // Generate the neighborhood (pairs of companies)
     vector<pair<int, int>> entorno;
@@ -34,7 +34,7 @@ ResultMH<double> LocalSearchMultiStart::optimize(Problem<double> &problem, int m
         evals++;
 
         // Update global best if initial solution is lucky
-        if (current_fitness > global_best_fitness) {
+        if (current_fitness < global_best_fitness) {
             global_best_fitness = current_fitness;
             global_best_sol = current_sol;
         }
@@ -72,14 +72,14 @@ ResultMH<double> LocalSearchMultiStart::optimize(Problem<double> &problem, int m
                 tFitness neighbor_fitness = problem.fitness(neighbor);
                 evals++;
 
-                // Accept first improvement found
-                if (neighbor_fitness > current_fitness) {
+                // Accept first improvement found for minimization.
+                if (neighbor_fitness < current_fitness) {
                     current_sol = neighbor;
                     current_fitness = neighbor_fitness;
                     improvement_found = true;
                     
                     // If this local optimum beats the global best, update it
-                    if (current_fitness > global_best_fitness) {
+                    if (current_fitness < global_best_fitness) {
                         global_best_fitness = current_fitness;
                         global_best_sol = current_sol;
                     }

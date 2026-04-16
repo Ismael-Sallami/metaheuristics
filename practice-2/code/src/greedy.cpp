@@ -29,10 +29,10 @@ ResultMH<double> GreedySearch::optimize(Problem<double> &problem, int maxevals) 
         ranking[i] = {static_cast<int>(i), heuristica};
     }
 
-    // Sort the ranking from BEST to WORST score
+    // Sort the ranking from BEST to WORST score for minimization.
     sort(ranking.begin(), ranking.end(), 
          [](const pair<int, double>& a, const pair<int, double>& b) {
-             return a.second > b.second; 
+             return a.second < b.second;
          });
 
     // The Greedy: Distribute the budget

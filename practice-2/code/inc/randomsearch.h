@@ -29,13 +29,13 @@ public:
   ResultMH<tDomain> optimize(Problem<tDomain> &problem, int maxevals) override {
     assert(maxevals > 0);
     tSolution<tDomain> best;
-    tFitness best_fitness = -1;
+    tFitness best_fitness = 0;
 
     for (int i = 0; i < maxevals; i++) {
       auto solution = problem.createSolution();
       tFitness fitness = problem.fitness(solution);
-      // we ensure that in the first iteration we update the best solution, and then we compare it with the others
-      if (i == 0 || fitness > best_fitness) { 
+      // We ensure that in the first iteration we update the best solution, and then keep the minimum.
+      if (i == 0 || fitness < best_fitness) {
         best = solution;
         best_fitness = fitness;
       }

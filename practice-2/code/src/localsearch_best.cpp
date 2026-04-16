@@ -36,7 +36,7 @@ ResultMH<double> LocalSearchBest::optimize(Problem<double> &problem, int maxeval
         Random::shuffle(entorno);
 
         tSolution<double> mejor_vecino_sol = current_sol;
-        tFitness mejor_vecino_fitness = -INFINITY; // Initialize with very low value
+        tFitness mejor_vecino_fitness = INFINITY;
 
         // Explore the entire neighborhood (or until we run out of evaluations)
         for (const auto& par : entorno) {
@@ -63,15 +63,15 @@ ResultMH<double> LocalSearchBest::optimize(Problem<double> &problem, int maxeval
             tFitness neighbor_fitness = problem.fitness(neighbor);
             evals++;
 
-            // Keep the best neighbor found in this iteration
-            if (neighbor_fitness > mejor_vecino_fitness) {
+            // Keep the best neighbor found in this iteration for minimization.
+            if (neighbor_fitness < mejor_vecino_fitness) {
                 mejor_vecino_fitness = neighbor_fitness;
                 mejor_vecino_sol = neighbor;
             }
         }
 
-        // Check if the best neighbor is better than the current solution
-        if (mejor_vecino_fitness > current_fitness) {
+        // Check if the best neighbor is better than the current solution.
+        if (mejor_vecino_fitness < current_fitness) {
             current_sol = mejor_vecino_sol;
             current_fitness = mejor_vecino_fitness;
             mejora_encontrada = true;

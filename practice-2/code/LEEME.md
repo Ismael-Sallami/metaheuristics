@@ -1,6 +1,6 @@
 # LEEME - Directorio `software/`
 
-> Práctica 1 Metaheurística - Ismael Sallami Moreno
+> Práctica 2 Metaheurística (Poblaciones) - Ismael Sallami Moreno
 
 Este fichero incluye una reseña breve de los ficheros entregados en este directorio.
 
@@ -54,6 +54,13 @@ evaluaciones.
 - `inc/localsearch.h`: Interfaz de búsqueda local.
 - `inc/localsearch_best.h`: Interfaz de búsqueda local de mejora (best improvement).
 - `inc/localsearch_multistart.h`: Interfaz de búsqueda local multiarranque.
+- `inc/ea_common.h`: Utilidades comunes para algoritmos evolutivos poblacionales.
+- `inc/genetic_algorithm.h`: Interfaz AGG/AGE (Aritmético, BLX, y variante gaussiana).
+- `inc/memetic_algorithm.h`: Interfaz de AM-All, AM-Rand y AM-Best.
+- `inc/memetic_lsch.h`: Interfaz de AM adaptativo con cadena de BL (LSCh).
+- `inc/soft_local_search.h`: Operador de BL suave reutilizable por AM.
+- `inc/differential_evolution.h`: Interfaz para DE/rand/1/bin.
+- `inc/gaussian_mutation.h`: Operador de mutación gaussiana para extra.
 - `inc/pincrem.h`: Definiciones auxiliares para estrategia incremental/constructiva.
 
 ## Carpeta `src/` (implementación)
@@ -64,6 +71,12 @@ evaluaciones.
 - `src/localsearch.cpp`: Implementación del algoritmo de búsqueda local.
 - `src/localsearch_best.cpp`: Implementación de búsqueda local de mejora (best improvement).
 - `src/localsearch_multistart.cpp`: Implementación de búsqueda local multiarranque.
+- `src/genetic_algorithm.cpp`: Implementación de AGG/AGE.
+- `src/memetic_algorithm.cpp`: Implementación de AM-All, AM-Rand y AM-Best.
+- `src/memetic_lsch.cpp`: Implementación de AM-LSCh adaptativo.
+- `src/soft_local_search.cpp`: Implementación de BL suave para AM.
+- `src/differential_evolution.cpp`: Implementación de DE/rand/1/bin.
+- `src/gaussian_mutation.cpp`: Implementación de mutación gaussiana.
 
 ## Carpeta `datos_portfolio_2526/`
 
