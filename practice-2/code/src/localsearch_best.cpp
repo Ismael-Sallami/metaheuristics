@@ -64,14 +64,15 @@ ResultMH<double> LocalSearchBest::optimize(Problem<double> &problem, int maxeval
             evals++;
 
             // Keep the best neighbor found in this iteration for minimization.
-            if (neighbor_fitness < mejor_vecino_fitness) {
+            // Keep the best neighbor found in this iteration for maximization.
+            if (neighbor_fitness > mejor_vecino_fitness) {
                 mejor_vecino_fitness = neighbor_fitness;
                 mejor_vecino_sol = neighbor;
             }
         }
 
         // Check if the best neighbor is better than the current solution.
-        if (mejor_vecino_fitness < current_fitness) {
+        if (mejor_vecino_fitness > current_fitness) {
             current_sol = mejor_vecino_sol;
             current_fitness = mejor_vecino_fitness;
             mejora_encontrada = true;

@@ -118,7 +118,7 @@ ResultMH<double> MemeticLSCh::optimize(Problem<double> &problem, int maxevals) {
                 );
                 evals += used;
 
-                if (population[idx].fitness < before) {
+                if (population[idx].fitness > before) {
                     ls_budget[idx] = std::min(m_max_budget, static_cast<int>(ls_budget[idx] * m_growth));
                 } else {
                     ls_budget[idx] = std::max(m_base_budget, ls_budget[idx] / 2);

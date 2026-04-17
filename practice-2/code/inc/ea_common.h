@@ -12,8 +12,8 @@ struct EAIndividual {
 };
 
 inline bool ea_better(tFitness a, tFitness b) {
-    // Pr2 follows minimization of fitness.
-    return a < b;
+    // Pr2 follows maximization of fitness.
+    return a > b;
 }
 
 inline int ea_best_index(const std::vector<EAIndividual> &pop) {

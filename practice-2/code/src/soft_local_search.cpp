@@ -62,8 +62,8 @@ int apply_soft_local_search(
             const tFitness nfit = problem.fitness(neighbor);
             ++evals;
 
-            // Minimize fitness in Pr2.
-            if (nfit < fitness) {
+            // Maximize fitness in Pr2.
+            if (nfit > fitness) {
                 solution = std::move(neighbor);
                 fitness = nfit;
                 improved = true;

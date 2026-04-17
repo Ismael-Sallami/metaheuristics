@@ -67,8 +67,8 @@ ResultMH<double> LocalSearch::optimize(Problem<double> &problem, int maxevals) {
             tFitness neighbor_fitness = problem.fitness(neighbor);
             evals++;
 
-            // "First Best" strategy for minimization.
-            if (neighbor_fitness < current_fitness) {
+            // "First Best" strategy for maximization.
+            if (neighbor_fitness > current_fitness) {
                 current_sol = neighbor;
                 current_fitness = neighbor_fitness;
                 mejora_encontrada = true;

@@ -35,7 +35,7 @@ public:
       auto solution = problem.createSolution();
       tFitness fitness = problem.fitness(solution);
       // We ensure that in the first iteration we update the best solution, and then keep the minimum.
-      if (i == 0 || fitness < best_fitness) {
+      if (i == 0 || fitness > best_fitness) {
         best = solution;
         best_fitness = fitness;
       }
