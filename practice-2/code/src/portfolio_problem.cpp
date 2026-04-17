@@ -50,7 +50,8 @@ tFitness PortfolioProblem::fitness(const tSolution<double> &solution) {
         }
     }
 
-    return beneficio - (m_lambda * riesgo);
+    // in the pr2 the risk term is the portfolio standard deviation
+    return beneficio - m_lambda * sqrt(std::max(riesgo, 0.0)); // We use max to avoid negative values due to numerical issues
 }
 
 tSolution<double> PortfolioProblem::createSolution() {
