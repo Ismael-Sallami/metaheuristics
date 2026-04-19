@@ -328,7 +328,7 @@ int main(int argc, char *argv[])
                 }
 
                 best_agg_crossover =
-                    (s_agg_blx.media_fitness_train < s_agg_arit.media_fitness_train)
+                    (s_agg_blx.media_fitness_train > s_agg_arit.media_fitness_train)
                         ? CrossoverType::BLX
                         : CrossoverType::ARITHMETIC;
 

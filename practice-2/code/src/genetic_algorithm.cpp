@@ -142,20 +142,19 @@ ResultMH<double> GeneticAlgorithm::run_age(Problem<double> &problem, int maxeval
         ea_evaluate_individual(problem, c1, evals);
         ea_evaluate_individual(problem, c2, evals);
 
-        int worst1 = ea_worst_index(population);
-        int worst2 = worst1;
-        for (int i = 0; i < static_cast<int>(population.size()); ++i) {
-            if (i == worst1) continue;
-            if (worst2 == worst1 || ea_better(population[worst2].fitness, population[i].fitness)) {
-                worst2 = i;
-            }
+        // Find the current worst individual and compare it with the first child (c1)
+        int worst_idx = ea_worst_index(population);
+        if (ea_better(c1.fitness, population[worst_idx].fitness)) {
+            population[worst_idx] = c1;
         }
 
-        if (ea_better(c1.fitness, population[worst1].fitness)) {
-            population[worst1] = c1;
-        }
-        if (ea_better(c2.fitness, population[worst2].fitness)) {
-            population[worst2] = c2;
+        // Find the worst individual index again.
+        // This is important because the population may have changed if c1 was inserted.
+        worst_idx = ea_worst_index(population);
+
+        // Compare the second child (c2) with the new worst individual
+        if (ea_better(c2.fitness, population[worst_idx].fitness)) {
+            population[worst_idx] = c2;
         }
 
         int best_now_idx = ea_best_index(population);
