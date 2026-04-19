@@ -190,7 +190,7 @@ double PortfolioProblem::getGreedyHeuristic(int companyIndex) {
         suma_covarianzas += m_data.covariance[companyIndex][j];
     }
     
-    double heuristica = beneficio - (m_lambda * (suma_covarianzas / m_data.numDays)); 
+    double heuristica = beneficio - (m_lambda * sqrt(std::max(suma_covarianzas, 0.0))); 
     
     return heuristica;
 }
