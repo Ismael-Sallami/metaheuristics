@@ -26,7 +26,7 @@ public:
     tSolution<double> createSolution() override;
     void fix(tSolution<double> &solution) override;
     double getGreedyHeuristic(int companyIndex); 
-    double getBeneficio(const tSolution<double> &solution); 
+    double getProfit(const tSolution<double> &solution); 
 };
 
 #endif

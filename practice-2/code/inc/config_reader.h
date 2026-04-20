@@ -5,8 +5,8 @@
 
 struct Config {
     long int seed;
-    int max_evaluaciones;
-    int num_ejecuciones;
+    int max_evaluations;
+    int num_executions;
     double lambda;
     double ls_ratio;
 

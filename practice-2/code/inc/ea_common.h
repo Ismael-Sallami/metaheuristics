@@ -6,16 +6,46 @@
 #include "problem.h"
 #include "random.hpp"
 
+/**
+ * @file ea_common.h
+ * @brief Shared helper utilities for evolutionary algorithms.
+ *
+ * This file groups small reusable functions used by GA, AM and DE modules.
+ * The helpers here manage common tasks such as:
+ * - Population initialization.
+ * - Fitness-based comparisons and rankings.
+ * - Parent selection.
+ * - Crossover operators.
+ * - Simple transfer mutation.
+ */
+
+/**
+ * @brief Basic individual representation for evolutionary algorithms.
+ *
+ * Each individual stores:
+ * - solution: vector of decision variables.
+ * - fitness: objective value for that solution.
+ */
 struct EAIndividual {
     tSolution<double> solution;
     tFitness fitness;
 };
 
+/**
+ * @brief Returns true when fitness @p a is better than fitness @p b.
+ *
+ * In this project the objective is maximization, so larger fitness is better.
+ */
 inline bool ea_better(tFitness a, tFitness b) {
-    // Pr2 follows maximization of fitness.
     return a > b;
 }
 
+/**
+ * @brief Gets the index of the best individual in a population.
+ *
+ * @param pop Population to inspect.
+ * @return Index of the individual with best fitness according to ea_better().
+ */
 inline int ea_best_index(const std::vector<EAIndividual> &pop) {
     int best = 0;
     for (int i = 1; i < static_cast<int>(pop.size()); ++i) {
@@ -26,6 +56,12 @@ inline int ea_best_index(const std::vector<EAIndividual> &pop) {
     return best;
 }
 
+/**
+ * @brief Gets the index of the worst individual in a population.
+ *
+ * @param pop Population to inspect.
+ * @return Index of the individual with worst fitness according to ea_better().
+ */
 inline int ea_worst_index(const std::vector<EAIndividual> &pop) {
     int worst = 0;
     for (int i = 1; i < static_cast<int>(pop.size()); ++i) {
@@ -36,12 +72,30 @@ inline int ea_worst_index(const std::vector<EAIndividual> &pop) {
     return worst;
 }
 
+/**
+ * @brief Repairs and evaluates one individual.
+ *
+ * The function first calls problem.fix() to enforce feasibility,
+ * then computes fitness, and finally increments the evaluation counter.
+ *
+ * @param problem Optimization problem.
+ * @param ind Individual to evaluate.
+ * @param evals Evaluation counter (updated by reference).
+ */
 inline void ea_evaluate_individual(Problem<double> &problem, EAIndividual &ind, unsigned int &evals) {
     problem.fix(ind.solution);
     ind.fitness = problem.fitness(ind.solution);
     ++evals;
 }
 
+/**
+ * @brief Creates and evaluates an initial random population.
+ *
+ * @param problem Optimization problem.
+ * @param pop_size Number of individuals to generate.
+ * @param evals Evaluation counter (updated by reference).
+ * @return A fully evaluated population.
+ */
 inline std::vector<EAIndividual> ea_initialize_population(
     Problem<double> &problem,
     int pop_size,
@@ -60,6 +114,15 @@ inline std::vector<EAIndividual> ea_initialize_population(
     return pop;
 }
 
+/**
+ * @brief Runs a tournament selection with k=3.
+ *
+ * Three random indices are sampled and the best one is returned.
+ * Sampling is done with replacement.
+ *
+ * @param pop Population used as tournament pool.
+ * @return Index of the tournament winner.
+ */
 inline int ea_tournament_k3(const std::vector<EAIndividual> &pop) {
     const int n = static_cast<int>(pop.size());
     int a = Random::get<int>(0, n - 1);
@@ -72,6 +135,17 @@ inline int ea_tournament_k3(const std::vector<EAIndividual> &pop) {
     return best;
 }
 
+/**
+ * @brief Arithmetic crossover operator.
+ *
+ * For each gene, a random sigma in [0,1] is sampled and two children are built
+ * as convex combinations of parent genes.
+ *
+ * @param p1 First parent.
+ * @param p2 Second parent.
+ * @param c1 First child (output).
+ * @param c2 Second child (output).
+ */
 inline void ea_arithmetic_crossover(
     const tSolution<double> &p1,
     const tSolution<double> &p2,
@@ -89,6 +163,18 @@ inline void ea_arithmetic_crossover(
     }
 }
 
+/**
+ * @brief BLX-alpha crossover operator.
+ *
+ * For each gene, children are sampled uniformly from the extended interval:
+ * [min(p1,p2) - alpha*I, max(p1,p2) + alpha*I], where I is parent distance.
+ *
+ * @param p1 First parent.
+ * @param p2 Second parent.
+ * @param alpha BLX expansion parameter.
+ * @param c1 First child (output).
+ * @param c2 Second child (output).
+ */
 inline void ea_blx_crossover(
     const tSolution<double> &p1,
     const tSolution<double> &p2,
@@ -112,6 +198,18 @@ inline void ea_blx_crossover(
     }
 }
 
+/**
+ * @brief Transfer mutation between two random positions.
+ *
+ * With probability pm_indiv, the operator moves a fraction of one gene value
+ * (transfer_ratio) from a random source position i to a different position j.
+ * The result is repaired with problem.fix().
+ *
+ * @param sol Solution to mutate.
+ * @param problem Optimization problem (used for repair).
+ * @param pm_indiv Mutation probability per individual.
+ * @param transfer_ratio Fraction transferred from i to j.
+ */
 inline void ea_mutate_transfer(
     tSolution<double> &sol,
     Problem<double> &problem,
@@ -123,7 +221,7 @@ inline void ea_mutate_transfer(
     }
 
     const int n = static_cast<int>(sol.size());
-    if (n < 2) { // we need at least 2 variables to transfer between them
+    if (n < 2) {
         return;
     }
 
@@ -137,14 +235,24 @@ inline void ea_mutate_transfer(
     sol[i] -= amount;
     sol[j] += amount;
 
-    problem.fix(sol); // ensure the solution is valid after mutation
+    problem.fix(sol);
 }
 
 
+/**
+ * @brief Returns indices of the best k individuals in descending quality order.
+ *
+ * This function sorts only integer indices, not full individuals, to reduce
+ * unnecessary data movement.
+ *
+ * @param pop Population to rank.
+ * @param k Number of top indices requested.
+ * @return Vector with the best k indices (or all indices if k is large).
+ */
 inline std::vector<int> ea_best_k_indices(const std::vector<EAIndividual> &pop, int k) {
     std::vector<int> idx(pop.size());
     for (int i = 0; i < static_cast<int>(pop.size()); ++i) {
-        idx[i] = i; // initialize with indices, in this way it is more efficient to sort in terms of memory and time than sorting the whole population
+        idx[i] = i;
     }
     
     std::sort(idx.begin(), idx.end(), [&](int a, int b) {
