@@ -30,6 +30,7 @@ ResultMH<double> MemeticLSCh::optimize(Problem<double> &problem, int maxevals) {
 
     auto population = ea_initialize_population(problem, m_pop_size, evals);
     std::vector<int> ls_budget(m_pop_size, m_base_budget);
+    std::vector<SoftLSState> ls_state(m_pop_size);
     EAIndividual best_global = population[ea_best_index(population)];
 
     while (evals + static_cast<unsigned int>(m_pop_size) <= static_cast<unsigned int>(maxevals)) {
@@ -43,6 +44,7 @@ ResultMH<double> MemeticLSCh::optimize(Problem<double> &problem, int maxevals) {
 
         std::vector<EAIndividual> children(m_pop_size);
         std::vector<int> child_budget(m_pop_size, m_base_budget); // New children start with base budget
+        std::vector<SoftLSState> child_state(m_pop_size); // New children start with fresh LS state
 
         // Crossover and Mutation
         for (int i = 0; i < m_pop_size; i += 2) {
@@ -79,10 +81,12 @@ ResultMH<double> MemeticLSCh::optimize(Problem<double> &problem, int maxevals) {
             
             // The elite individual retains its historical Local Search chain budget
             child_budget[worst] = ls_budget[best_prev_idx];
+            child_state[worst] = ls_state[best_prev_idx];
         }
 
         population = std::move(children);
         ls_budget = std::move(child_budget);
+        ls_state = std::move(child_state);
         ++generation;
 
         // Local Search Chains (AM-Best Strategy)
@@ -106,7 +110,8 @@ ResultMH<double> MemeticLSCh::optimize(Problem<double> &problem, int maxevals) {
                     population[idx].solution,
                     population[idx].fitness,
                     0.15, // LS neighborhood intensity
-                    budget
+                    budget,
+                    ls_state[idx]
                 );
                 evals += used;
 

@@ -43,8 +43,8 @@ ResultMH<double> DifferentialEvolution::optimize(Problem<double> &problem, int m
                 donor[d] = population[r0].solution[d]
                          + m_f * (population[r1].solution[d] - population[r2].solution[d]);
             }
-            // Fix the donor to ensure portfolio weights are valid (e.g., sum to 1)
-            problem.fix(donor);
+            
+            // Do not apply fix to the donor vector donor because the difference (X_r1 - X_r2) should stay as a pure geometric vector. If it is clipped here, the DE step size behavior is changed: large steps when the population is spread out, and small steps when it converges.
 
             // binomial crossover
             tSolution<double> trial = population[i].solution;
