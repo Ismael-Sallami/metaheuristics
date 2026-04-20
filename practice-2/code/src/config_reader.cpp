@@ -7,8 +7,8 @@ Config ConfigReader::read(const std::string& filename) {
     // Set default values for the configuration
     Config config = {
         42,       // seed
-        10000,    // max_evaluaciones
-        50,       // num_ejecuciones
+        10000,    // max_evaluations
+        50,       // num_executions
         500.0,    // lambda
         0.4,      // ls_ratio
         100,      // ga_pop_size
@@ -60,8 +60,8 @@ Config ConfigReader::read(const std::string& filename) {
         if (std::getline(ss, key, '=') && std::getline(ss, value)) {
             // Map each key to its corresponding config value
             if (key == "SEED") config.seed = std::stol(value);
-            else if (key == "MAX_EVALUACIONES") config.max_evaluaciones = std::stoi(value);
-            else if (key == "NUM_EJECUCIONES") config.num_ejecuciones = std::stoi(value);
+            else if (key == "MAX_EVALUATIONS") config.max_evaluations = std::stoi(value);
+            else if (key == "NUM_EXECUTIONS") config.num_executions = std::stoi(value);
             else if (key == "LAMBDA") config.lambda = std::stod(value);
             else if (key == "LS_RATIO") config.ls_ratio = std::stod(value);
             else if (key == "GA_POP_SIZE") config.ga_pop_size = std::stoi(value);

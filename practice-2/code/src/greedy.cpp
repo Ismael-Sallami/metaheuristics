@@ -14,9 +14,9 @@ ResultMH<double> GreedySearch::optimize(Problem<double> &problem, int maxevals) 
     } // This is only possible to do in greedy
 
     size_t n = port_problem->getSolutionSize();
-    auto limites = port_problem->getSolutionDomainRange();
-    double lo = limites.first;
-    double hi = limites.second;
+    auto bounds = port_problem->getSolutionDomainRange();
+    double lo = bounds.first;
+    double hi = bounds.second;
 
     // Create the ranking table
     // Store pairs of {Company_ID, Heuristic}
@@ -25,8 +25,8 @@ ResultMH<double> GreedySearch::optimize(Problem<double> &problem, int maxevals) 
     // Score each company (The Heuristic)
     for (size_t i = 0; i < n; ++i) {
         // Evaluate this portfolio to see how good this company is by itself
-        double heuristica = port_problem->getGreedyHeuristic(i);
-        ranking[i] = {static_cast<int>(i), heuristica};
+        double heuristic = port_problem->getGreedyHeuristic(i);
+        ranking[i] = {static_cast<int>(i), heuristic};
     }
 
     // Sort the ranking from BEST to WORST score
@@ -37,18 +37,18 @@ ResultMH<double> GreedySearch::optimize(Problem<double> &problem, int maxevals) 
 
     // The Greedy: Distribute the budget
     tSolution<double> best_sol(n, 0.0);
-    double suma_w = 0.0;
+    double current_weight_sum = 0.0;
 
     for (size_t i = 0; i < n; ++i) {
-        int id_empresa = ranking[i].first;
+        int company_id = ranking[i].first;
 
         // While we haven't exceeded the total budget of 1.0
-        if (suma_w < 1.0 - 1e-8) { 
+        if (current_weight_sum < 1.0 - 1e-8) { 
             // We assign the minimum between the legal limit of the company (hi) 
-            // and what we have left of money (1.0 - suma_w)
-            double asignar = min(hi, 1.0 - suma_w);
-            best_sol[id_empresa] = asignar;
-            suma_w += asignar;
+            // and what we have left of money (1.0 - current_weight_sum)
+            double allocation = min(hi, 1.0 - current_weight_sum);
+            best_sol[company_id] = allocation;
+            current_weight_sum += allocation;
         } else {
             break; // Budget exhausted
         }
