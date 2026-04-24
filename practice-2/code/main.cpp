@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <stdexcept>
 #include <fstream>
+#include <sstream>
 
 // Config reader
 #include "config_reader.h"
@@ -33,6 +34,55 @@
 
 using namespace std;
 using namespace std::chrono;
+
+namespace ui
+{
+    // ANSI styles for terminal output.
+    const string RESET = "\033[0m";
+    const string BOLD = "\033[1m";
+    const string DIM = "\033[2m";
+
+    const string CYAN = "\033[36m";
+    const string BLUE = "\033[34m";
+    const string GREEN = "\033[32m";
+    const string YELLOW = "\033[33m";
+    const string RED = "\033[31m";
+    const string MAGENTA = "\033[35m";
+
+    string colorize(const string &text, const string &color)
+    {
+        return color + text + RESET;
+    }
+
+    string pad_double(double value, int width, int precision = 3)
+    {
+        ostringstream oss;
+        oss << right << setw(width) << fixed << setprecision(precision) << value;
+        return oss.str();
+    }
+
+    string pad_int(int value, int width)
+    {
+        ostringstream oss;
+        oss << right << setw(width) << value;
+        return oss.str();
+    }
+
+    string color_metric(double value, int width, int precision = 3)
+    {
+        const string padded = pad_double(value, width, precision);
+        if (value > 0.0)
+            return colorize(padded, GREEN);
+        if (value < 0.0)
+            return colorize(padded, RED);
+        return colorize(padded, YELLOW);
+    }
+
+    string separator(int width)
+    {
+        return colorize(string(width, '-'), DIM);
+    }
+}
 
 // Data structures
 
@@ -140,27 +190,33 @@ Statistics run_deterministic_experiment(
 
 void print_header()
 {
-    cout << string(121, '-') << "\n";
-    cout << left << setw(16) << "Algoritmo"
-         << right << setw(14) << "Train"
-         << setw(14) << "Test"
-         << setw(14) << "Profit"
-         << setw(14) << "Desv"
-         << setw(14) << "Evals"
-         << setw(14) << "Tiempo(s)"
-         << setw(21) << "\n";
-    cout << string(121, '-') << "\n";
+    const int width_total = 121;
+    cout << ui::separator(width_total) << "\n";
+    cout << ui::colorize(ui::BOLD + string("Results Table"), ui::BLUE) << "\n";
+    cout << ui::separator(width_total) << "\n";
+    cout << ui::colorize((ostringstream() << left << setw(16) << "Algorithm"
+                        << right << setw(14) << "Train"
+                        << setw(14) << "Test"
+                        << setw(14) << "Profit"
+                        << setw(14) << "Std"
+                        << setw(14) << "Evals"
+                        << setw(14) << "Time(s)"
+                        << setw(21) << "").str(), ui::BOLD + ui::MAGENTA) << "\n";
+    cout << ui::separator(width_total) << "\n";
 }
 
 void print_row(const string &name, const Statistics &s)
 {
-    cout << left << setw(16) << name
-         << right << setw(14) << s.mean_train_fitness
-         << setw(14) << s.mean_test_fitness
-         << setw(14) << s.mean_test_profit
-         << setw(14) << s.standard_deviation
-         << setw(14) << static_cast<int>(s.mean_evaluations)
-         << setw(14) << s.mean_time_seconds
+    ostringstream name_col;
+    name_col << left << setw(16) << name;
+
+    cout << ui::colorize(name_col.str(), ui::CYAN)
+         << ui::color_metric(s.mean_train_fitness, 14)
+         << ui::color_metric(s.mean_test_fitness, 14)
+         << ui::color_metric(s.mean_test_profit, 14)
+         << ui::color_metric(s.standard_deviation, 14)
+         << ui::colorize(ui::pad_int(static_cast<int>(s.mean_evaluations), 14), ui::YELLOW)
+         << ui::colorize(ui::pad_double(s.mean_time_seconds, 14), ui::BLUE)
          << "\n";
 }
 
@@ -188,7 +244,8 @@ int main(int argc, char *argv[])
     // Setup markets
     if (config.use_custom_market == 1)
     {
-        cout << "\n [INFO] CUSTOM mode ON. Running only config market.\n";
+        cout << "\n" << ui::colorize("[INFO]", ui::GREEN) << " "
+             << "CUSTOM mode ON. Running only config market.\n";
         markets.push_back({config.custom_name,
                   config.custom_path,
                   config.custom_lo,
@@ -203,13 +260,13 @@ int main(int argc, char *argv[])
             {"S&P 500", "datos_portfolio_2526/syp_500.csv", 0.005, 0.02}};
     }
 
-    cout << "\n==============================================================\n";
-    cout << "Portfolio Optimization Pr2 - Baselines + AG/AM/DE\n";
-    cout << "[PARAMS] seed=" << config.seed
+        cout << "\n" << ui::colorize(string(62, '='), ui::DIM) << "\n";
+        cout << ui::colorize(ui::BOLD + string("Portfolio Optimization Pr2 - Baselines + AG/AM/DE"), ui::BLUE) << "\n";
+        cout << ui::colorize("[PARAMS]", ui::MAGENTA) << " seed=" << config.seed
          << " lambda=" << config.lambda
          << " evals=" << config.max_evaluations
          << " runs=" << config.num_executions << "\n";
-    cout << "==============================================================\n\n";
+        cout << ui::colorize(string(62, '='), ui::DIM) << "\n\n";
 
     for (const auto &market : markets)
     {
@@ -406,7 +463,8 @@ int main(int argc, char *argv[])
                     config.num_executions, config.max_evaluations, config.seed);
             }
 
-            cout << "\nResults: " << market.name << "\n";
+              cout << "\n" << ui::colorize("Market:", ui::BOLD + ui::MAGENTA) << " "
+                  << ui::colorize(market.name, ui::BOLD + ui::CYAN) << "\n";
             cout << fixed << setprecision(3);
 
             print_header();
@@ -439,7 +497,7 @@ int main(int argc, char *argv[])
             {
                 print_row("DE", s_de);
             }
-            cout << string(121, '-') << "\n";
+            cout << ui::separator(121) << "\n";
 
             // Save results to CSV
             string clean_name = market.name;
@@ -453,7 +511,8 @@ int main(int argc, char *argv[])
             ofstream csv(csv_name);
             if (!csv.is_open())
             {
-                cout << " [WARNING] Could not create CSV for " << market.name << "\n";
+                cout << " " << ui::colorize("[WARNING]", ui::YELLOW)
+                     << " Could not create CSV for " << market.name << "\n";
             }
             else
             {
@@ -491,10 +550,12 @@ int main(int argc, char *argv[])
         }
         catch (const exception &e)
         {
-            cout << "\n [ERROR] Failed to process " << market.name << ": " << e.what() << "\n\n";
+            cout << "\n " << ui::colorize("[ERROR]", ui::RED)
+                 << " Failed to process " << market.name << ": " << e.what() << "\n\n";
         }
     }
 
-    cout << "\n>>> Done. Results saved to CSV files." << endl;
+    cout << "\n" << ui::colorize(ui::BOLD + string(">>> Done."), ui::GREEN)
+         << " Results saved to CSV files." << endl;
     return 0;
 }
