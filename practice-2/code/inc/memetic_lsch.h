@@ -11,9 +11,9 @@
  * @brief Memetic algorithm with Local Search Chains (MA-LSCh).
  *
  * This variant combines a generational GA cycle with periodic soft local
- * search on top individuals. Each LS chain keeps both:
- * - a persistent local-search state (pause/resume exploration), and
- * - an adaptive local-search budget per individual.
+ * search on one elite individual. Each LS chain keeps a persistent
+ * local-search state (pause/resume exploration) and applies a fixed
+ * intensity stretch budget in each LS call.
  */
 
 /**
@@ -23,9 +23,9 @@
  * - Uses tournament selection, crossover, and transfer mutation.
  * - Applies strict elitism at generation replacement.
  * - Runs local search every `m_ls_period` generations.
- * - Applies local search to the best 10% of population.
- * - Preserves chain state and budget for elite individuals.
- * - Updates each individual's search budget based on LS success.
+ * - Applies local search to the best individual.
+ * - Preserves chain state for cloned/elite individuals.
+ * - Uses fixed LS intensity stretch `m_i_str`.
  */
 class MemeticLSCh : public MH<double> {
 private:
@@ -44,12 +44,10 @@ private:
 
     /** Number of generations between local-search phases. */
     int m_ls_period;
-    /** Initial local-search budget for a new chain. */
-    int m_base_budget;
-    /** Maximum allowed local-search budget for one chain. */
-    int m_max_budget;
-    /** Growth factor applied to budget after successful local search. */
-    double m_growth;
+    /** Ratio used by soft local-search transfer moves. */
+    double m_ls_ratio;
+    /** Fixed local-search budget per chain step (Intensity Stretch). */
+    int m_i_str;
 
     /** Best fitness value recorded after each generation. */
     std::vector<double> m_last_convergence;
@@ -75,9 +73,8 @@ public:
      * @param blx_alpha BLX-alpha expansion factor.
      * @param mutation_ratio Transfer ratio used in mutation.
      * @param ls_period Generations between local-search applications.
-     * @param base_budget Initial LS budget for each chain.
-     * @param max_budget Maximum LS budget for each chain.
-     * @param growth Budget multiplier applied after LS improvement.
+     * @param ls_ratio Transfer ratio used by local search.
+     * @param i_str Fixed LS intensity stretch.
      */
     MemeticLSCh(
         CrossoverType crossover_type,
@@ -87,9 +84,8 @@ public:
         double blx_alpha,
         double mutation_ratio,
         int ls_period,
-        int base_budget,
-        int max_budget,
-        double growth
+        double ls_ratio,
+        int i_str
     );
 
     /** Virtual destructor for safe polymorphic use. */

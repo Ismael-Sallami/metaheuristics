@@ -389,9 +389,8 @@ int main(int argc, char *argv[])
                         config.ga_blx_alpha,
                         config.ga_mutation_ratio,
                         config.am_ls_period,
-                        config.am_lsch_base_budget,
-                        config.am_lsch_max_budget,
-                        config.am_lsch_growth);
+                        config.am_ls_ratio,
+                        config.am_lsch_i_str);
 
                     s_am_lsch = run_stochastic_experiment(
                         am_lsch, prob_train, prob_test,
