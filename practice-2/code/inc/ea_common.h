@@ -5,6 +5,7 @@
 #include <cmath>
 #include "problem.h"
 #include "random.hpp"
+#include <cassert>
 
 /**
  * @file ea_common.h
@@ -47,7 +48,8 @@ inline bool ea_better(tFitness a, tFitness b) {
  * @return Index of the individual with best fitness according to ea_better().
  */
 inline int ea_best_index(const std::vector<EAIndividual> &pop) {
-    int best = 0;
+    assert(!pop.empty());
+    int best = 0; // Assume the first individual is best until we find a better one.
     for (int i = 1; i < static_cast<int>(pop.size()); ++i) {
         if (ea_better(pop[i].fitness, pop[best].fitness)) {
             best = i;
@@ -63,7 +65,8 @@ inline int ea_best_index(const std::vector<EAIndividual> &pop) {
  * @return Index of the individual with worst fitness according to ea_better().
  */
 inline int ea_worst_index(const std::vector<EAIndividual> &pop) {
-    int worst = 0;
+    assert(!pop.empty());
+    int worst = 0; // Assume the first individual is worst until we find a worse one.
     for (int i = 1; i < static_cast<int>(pop.size()); ++i) {
         if (ea_better(pop[worst].fitness, pop[i].fitness)) {
             worst = i;
@@ -83,6 +86,7 @@ inline int ea_worst_index(const std::vector<EAIndividual> &pop) {
  * @param evals Evaluation counter (updated by reference).
  */
 inline void ea_evaluate_individual(Problem<double> &problem, EAIndividual &ind, unsigned int &evals) {
+    assert(!ind.solution.empty());
     problem.fix(ind.solution);
     ind.fitness = problem.fitness(ind.solution);
     ++evals;
@@ -189,7 +193,7 @@ inline void ea_blx_crossover(
     for (int i = 0; i < n; ++i) {
         const double cmax = std::max(p1[i], p2[i]);
         const double cmin = std::min(p1[i], p2[i]);
-        const double interval = cmax - cmin;
+        const double interval = cmax - cmin; // we don't need fabs() since cmax >= cmin
         const double low = cmin - alpha * interval;
         const double high = cmax + alpha * interval;
 
@@ -221,7 +225,7 @@ inline void ea_mutate_transfer(
     }
 
     const int n = static_cast<int>(sol.size());
-    if (n < 2) {
+    if (n < 2) { // Not enough genes to transfer, skip mutation.
         return;
     }
 
@@ -254,14 +258,17 @@ inline std::vector<int> ea_best_k_indices(const std::vector<EAIndividual> &pop, 
     for (int i = 0; i < static_cast<int>(pop.size()); ++i) {
         idx[i] = i;
     }
-    
-    std::sort(idx.begin(), idx.end(), [&](int a, int b) {
-        return ea_better(pop[a].fitness, pop[b].fitness);
-    });
 
+    const int limit = std::min(k, static_cast<int>(idx.size()));
+    if (limit > 0) { // Only sort if we need at least one index. Using partial_sort to get the top k without fully sorting the entire population.
+        std::partial_sort(idx.begin(), idx.begin() + limit, idx.end(), [&](int a, int b) { 
+            return ea_better(pop[a].fitness, pop[b].fitness);
+        });
+    }
     if (k < static_cast<int>(idx.size())) {
         idx.resize(k);
     }
+    
 
     return idx;
 }
