@@ -70,13 +70,17 @@ ResultMH<double> DifferentialEvolution::optimize(Problem<double> &problem, int m
             if (ea_better(trial_fit, population[i].fitness)) {
                 population[i].solution = std::move(trial);
                 population[i].fitness = trial_fit;
+
+                if (ea_better(trial_fit, best_global.fitness)) {
+                    best_global = population[i]; // Update global best if the trial is the best found so far O(1)
+                }
             }
 
             // Update the global best solution if the newly accepted individual is better
-            int best_now = ea_best_index(population);
-            if (ea_better(population[best_now].fitness, best_global.fitness)) {
-                best_global = population[best_now];
-            }
+            // int best_now = ea_best_index(population);
+            // if (ea_better(population[best_now].fitness, best_global.fitness)) {
+            //     best_global = population[best_now];
+            // } // I have changed it for using O(1) instead of O(n^2)
         }
 
         // Record the best fitness of the current generation for the convergence chart
