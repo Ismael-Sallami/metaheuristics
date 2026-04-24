@@ -55,7 +55,7 @@ ResultMH<double> GeneticAlgorithm::run_agg(Problem<double> &problem, int maxeval
 
         std::vector<EAIndividual> children(m_pop_size);
 
-        // --- Crossover optimization (expected number of crosses) ---
+        // Crossover (expected number of crosses)
         const int num_pairs = m_pop_size / 2;
         const int num_cross_pairs = static_cast<int>(m_pc * num_pairs);
 
@@ -79,20 +79,18 @@ ResultMH<double> GeneticAlgorithm::run_agg(Problem<double> &problem, int maxeval
             children[m_pop_size - 1].solution = parents[m_pop_size - 1].solution;
         }
 
-        // --- Mutation optimization (expected mutated individuals) ---
+        // Mutation (expected mutated individuals) 
         const int num_mut_individuals = static_cast<int>(m_pm_indiv * m_pop_size);
 
-        for (int i = 0; i < m_pop_size; ++i) {
-            const double pm = (i < num_mut_individuals) ? 1.0 : 0.0;
+        for (int i = 0; i < num_mut_individuals; ++i) {
+            int random_idx = Random::get<int>(0, m_pop_size - 1);
 
             if (m_mutation_type == MutationType::GAUSSIAN) {
-                gaussian_mutate_individual(children[i].solution, problem, pm, m_gaussian_sigma);
+                gaussian_mutate_individual(children[random_idx].solution, problem, 1.0, m_gaussian_sigma);
             } else {
-                ea_mutate_transfer(children[i].solution, problem, pm, m_mutation_ratio);
+                ea_mutate_transfer(children[random_idx].solution, problem, 1.0, m_mutation_ratio);
             }
 
-            // Si los operadores no reparan internamente, hacerlo aquí.
-            // repair_solution(children[i].solution, problem);
         }
 
         for (int i = 0; i < m_pop_size; ++i) {
