@@ -25,9 +25,7 @@ struct Config {
     int am_ls_max_evals;       // Maximum evaluations allowed per Local Search invocation
     double am_ls_ratio;        // Ratio of the population to which Local Search is applied
     double am_pls_rand;        // Probability of applying Local Search to a specific individual in AM-Rand variant
-    int am_lsch_base_budget;   // Base intensity for Local Search Chains variant
-    int am_lsch_max_budget;    // Maximum intensity for Local Search Chains variant
-    double am_lsch_growth;     // Growth factor for Local Search Chains variant
+    int am_lsch_i_str;         // Fixed intensity stretch for Local Search Chains variant
 
     // Differential Evolution parameters
     double de_f;               // Scaling factor for differential mutation

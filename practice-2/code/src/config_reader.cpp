@@ -22,9 +22,7 @@ Config ConfigReader::read(const std::string& filename) {
         100,      // am_ls_max_evals
         0.15,     // am_ls_ratio
         0.1,      // am_pls_rand
-        30,       // am_lsch_base_budget
-        200,      // am_lsch_max_budget
-        1.2,      // am_lsch_growth
+        500,      // am_lsch_i_str
         0.5,      // de_f
         0.9,      // de_cr
         100,      // de_pop_size
@@ -75,9 +73,7 @@ Config ConfigReader::read(const std::string& filename) {
             else if (key == "AM_LS_MAX_EVALS") config.am_ls_max_evals = std::stoi(value);
             else if (key == "AM_LS_RATIO") config.am_ls_ratio = std::stod(value);
             else if (key == "AM_PLS_RAND") config.am_pls_rand = std::stod(value);
-            else if (key == "AM_LSCH_BASE_BUDGET") config.am_lsch_base_budget = std::stoi(value);
-            else if (key == "AM_LSCH_MAX_BUDGET") config.am_lsch_max_budget = std::stoi(value);
-            else if (key == "AM_LSCH_GROWTH") config.am_lsch_growth = std::stod(value);
+            else if (key == "AM_LSCH_I_STR") config.am_lsch_i_str = std::stoi(value);
             else if (key == "DE_F") config.de_f = std::stod(value);
             else if (key == "DE_CR") config.de_cr = std::stod(value);
             else if (key == "DE_POP_SIZE") config.de_pop_size = std::stoi(value);
