@@ -46,56 +46,71 @@ ResultMH<double> GeneticAlgorithm::run_agg(Problem<double> &problem, int maxeval
     EAIndividual best_global = population[best_idx];
 
     while (evals + static_cast<unsigned int>(m_pop_size) <= static_cast<unsigned int>(maxevals)) {
-        std::vector<EAIndividual> parents;
-        parents.reserve(m_pop_size);
+        std::vector<EAIndividual> parents(m_pop_size);
 
-        // Selection phase
+        // Selection phase (k=3 tournament)
         for (int i = 0; i < m_pop_size; ++i) {
-            int idx = ea_tournament_k3(population);
-            parents.push_back(population[idx]);
+            parents[i] = population[ea_tournament_k3(population)];
         }
 
         std::vector<EAIndividual> children(m_pop_size);
 
-        for (int i = 0; i < m_pop_size; i += 2) { // crossover and mutation phase
-            const auto &p1 = parents[i].solution;
-            const auto &p2 = parents[(i + 1) % m_pop_size].solution;
+        // --- Crossover optimization (expected number of crosses) ---
+        const int num_pairs = m_pop_size / 2;
+        const int num_cross_pairs = static_cast<int>(m_pc * num_pairs);
 
-            tSolution<double> c1, c2;
-            if (Random::get<double>(0.0, 1.0) <= m_pc) {
-                crossover_pair(p1, p2, c1, c2);
+        for (int pair = 0; pair < num_pairs; ++pair) {
+            const int i = 2 * pair;
+            const int j = (i + 1) % m_pop_size;
+
+            const auto &p1 = parents[i].solution;
+            const auto &p2 = parents[j].solution;
+
+            if (pair < num_cross_pairs) {
+                crossover_pair(p1, p2, children[i].solution, children[j].solution);
             } else {
-                c1 = p1;
-                c2 = p2;
+                children[i].solution = p1;
+                children[j].solution = p2;
             }
+        }
+
+        // If pop size is odd, keep last individual copied
+        if (m_pop_size % 2 != 0) {
+            children[m_pop_size - 1].solution = parents[m_pop_size - 1].solution;
+        }
+
+        // --- Mutation optimization (expected mutated individuals) ---
+        const int num_mut_individuals = static_cast<int>(m_pm_indiv * m_pop_size);
+
+        for (int i = 0; i < m_pop_size; ++i) {
+            const double pm = (i < num_mut_individuals) ? 1.0 : 0.0;
 
             if (m_mutation_type == MutationType::GAUSSIAN) {
-                gaussian_mutate_individual(c1, problem, m_pm_indiv, m_gaussian_sigma);
-                gaussian_mutate_individual(c2, problem, m_pm_indiv, m_gaussian_sigma);
+                gaussian_mutate_individual(children[i].solution, problem, pm, m_gaussian_sigma);
             } else {
-                ea_mutate_transfer(c1, problem, m_pm_indiv, m_mutation_ratio);
-                ea_mutate_transfer(c2, problem, m_pm_indiv, m_mutation_ratio);
+                ea_mutate_transfer(children[i].solution, problem, pm, m_mutation_ratio);
             }
 
-            children[i].solution = c1;
-            children[(i + 1) % m_pop_size].solution = c2;
+            // Si los operadores no reparan internamente, hacerlo aquí.
+            // repair_solution(children[i].solution, problem);
         }
 
         for (int i = 0; i < m_pop_size; ++i) {
             ea_evaluate_individual(problem, children[i], evals);
         }
 
-        int best_prev_idx = ea_best_index(population);
-        int best_child_idx = ea_best_index(children);
+        // Elitism: preserve best from previous population
+        const int best_prev_idx = ea_best_index(population);
+        const int best_child_idx = ea_best_index(children);
 
-        if (ea_better(population[best_prev_idx].fitness, children[best_child_idx].fitness)) { // elitism mechanism
-            int worst_child_idx = ea_worst_index(children);
+        if (ea_better(population[best_prev_idx].fitness, children[best_child_idx].fitness)) {
+            const int worst_child_idx = ea_worst_index(children);
             children[worst_child_idx] = population[best_prev_idx];
         }
 
-        population = std::move(children); // instead of copying, we can just move the children to population (pointers)
+        population = std::move(children);
 
-        int best_now_idx = ea_best_index(population);
+        const int best_now_idx = ea_best_index(population);
         if (ea_better(population[best_now_idx].fitness, best_global.fitness)) {
             best_global = population[best_now_idx];
         }
