@@ -131,18 +131,17 @@ ResultMH<double> GeneticAlgorithm::run_age(Problem<double> &problem, int maxeval
     while (evals + 2 <= static_cast<unsigned int>(maxevals)) { // Only 2 individuals are born per iteration
         int p1_idx = ea_tournament_k3(population);
         int p2_idx = ea_tournament_k3(population);
+        while (population.size() > 1 && p2_idx == p1_idx) {
+            p2_idx = ea_tournament_k3(population);
+        }
 
         const auto &p1 = population[p1_idx].solution;
         const auto &p2 = population[p2_idx].solution;
 
         EAIndividual c1, c2;
 
-        if (Random::get<double>(0.0, 1.0) <= m_pc) {
-            crossover_pair(p1, p2, c1.solution, c2.solution);
-        } else {
-            c1.solution = p1;
-            c2.solution = p2;
-        }
+        // AGE always crosses (Pc = 1.0)
+        crossover_pair(p1, p2, c1.solution, c2.solution);
 
         if (m_mutation_type == MutationType::GAUSSIAN) {
             gaussian_mutate_individual(c1.solution, problem, m_pm_indiv, m_gaussian_sigma);
