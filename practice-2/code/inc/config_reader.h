@@ -3,12 +3,13 @@
 
 #include <string>
 
+// Stores all configuration parameters loaded from the config file.
 struct Config {
     long int seed;
     int max_evaluations;
     int num_executions;
     double lambda;
-    double ls_ratio;
+    double ls_ratio;  // Ratio of the population used for local search.
 
     // Evolutionary algorithm parameters
     int ga_pop_size;           // Population size (number of chromosomes/portfolios per generation)
@@ -35,7 +36,7 @@ struct Config {
 
     // Execution flags
     int exp_run_ag_am;         // Flag to enable/disable Genetic and Memetic algorithms execution
-    int exp_run_extras;        // Flag to enable/disable Extra variants execution
+    int exp_run_extras;         // Flag to enable/disable Extra variants execution
     int exp_run_gaussian;      // Flag to enable/disable Gaussian mutation variant
     int exp_run_lsch;          // Flag to enable/disable Local Search Chains variant
     
