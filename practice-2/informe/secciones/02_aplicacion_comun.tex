@@ -1,0 +1,169 @@
+\section{Aplicación de los Algoritmos al Problema de Portfolio}
+\label{sec:aplicacion}
+
+En este apartado se recogen los elementos comunes a todos los algoritmos empleados en la práctica. La idea es fijar primero cómo se representa una solución, cómo se evalúa y cómo se mantiene la factibilidad; después se describen los operadores compartidos de selección, cruce y mutación.
+
+\subsection{Esquema de representación}
+Se utiliza una \textbf{representación real} basada en un vector de pesos
+$$
+S = (s_1, s_2, \dots, s_N)
+$$
+donde cada componente $s_i$ indica la fracción del capital invertida en el activo $i$. Una solución es factible si se cumplen simultáneamente estas condiciones:
+\begin{itemize}
+    \item $\sum_{i=1}^N s_i = 1$.
+    \item Para cada activo, o bien $s_i = 0$, o bien $s_i \in [lo, hi]$.
+\end{itemize}
+
+La población inicial se genera aleatoriamente y, a continuación, se aplica reparación para garantizar que todos los individuos parten de soluciones válidas.
+
+\subsection{Función objetivo}
+La calidad de una cartera se mide con una función de \textit{fitness} que combina beneficio y riesgo. Como en el problema se busca maximizar, una mayor aptitud indica una mejor solución.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Solución $S$, beneficios logarítmicos $logBenefits$, matriz de covarianza $Cov$, parámetro $\lambda$}
+\KwOut{Valor de \textit{fitness} de $S$}
+
+$beneficio \leftarrow 0$
+
+\For{$i \leftarrow 1$ \KwTo $N$}{
+    $beneficio \leftarrow beneficio + s_i \cdot logBenefits_i$
+}
+
+$riesgo \leftarrow 0$
+
+\For{$i \leftarrow 1$ \KwTo $N$}{
+    \For{$j \leftarrow 1$ \KwTo $N$}{
+        $riesgo \leftarrow riesgo + s_i \cdot s_j \cdot Cov(i,j)$
+    }
+}
+
+\Return $beneficio - \lambda \cdot \sqrt{\max(0, riesgo)}$
+\caption{Evaluación de una solución}
+\end{algorithm}
+\textit{Nota: Se incorpora el operador $\max(0, \cdot)$ dentro de la raíz cuadrada para garantizar la estabilidad numérica del algoritmo, evitando valores negativos infinitesimales producidos por errores de precisión en punto flotante (IEEE 754).}
+
+\subsection{Operador de reparación}
+Los operadores genéticos pueden producir soluciones no factibles, por lo que después de cada cruce o mutación se aplica un operador de reparación. Su misión es devolver el vector al espacio de búsqueda permitido sin alterar innecesariamente la estructura de la solución.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Vector de pesos $S$}
+\KwOut{Solución reparada y factible}
+
+Calcular la suma total de los pesos\;
+\If{la suma es positiva y $|sum-1| > 10^{-8}$}{
+    Normalizar todos los pesos dividiéndolos por la suma\;
+}
+
+\For{cada gen $s_i$}{
+    \If{$s_i < lo$}{
+        $s_i \leftarrow 0$
+    }
+    \ElseIf{$s_i > hi$}{
+        $s_i \leftarrow hi$
+    }
+}
+
+Recalcular la suma total\;
+Inicializar un contador de seguridad a 0\;
+
+\While{$|sum-1| > 10^{-8}$ \textbf{y} contador$<1000$}{
+    Incrementar contador\;
+    $dif \leftarrow 1-sum$
+
+    \eIf{$dif > 0$}{
+        Seleccionar posiciones con $0 < s_i < hi$\;
+        \If{no hay posiciones candidatas}{
+            Seleccionar una posición aleatoria con $s_i = 0$ y asignarle $lo$\;
+            Recalcular la suma total\;
+            \textbf{continuar}\;
+        }
+        Distribuir $dif$ entre las posiciones candidatas sin superar $hi$\;
+    }{
+        Seleccionar posiciones con $s_i > lo$\;
+        \If{no hay posiciones candidatas}{
+            \textbf{romper}\;
+        }
+        Restar $|dif|$ entre las posiciones candidatas sin bajar de $lo$\;
+    }
+
+    Recalcular la suma total\;
+}
+\caption{Reparación de una solución}
+\end{algorithm}
+
+\subsection{Operadores comunes}
+\subsubsection{Selección de padres: torneo de tamaño 3}
+La selección se realiza mediante un torneo de tamaño $k=3$. Para elegir un padre se toman tres individuos al azar de la población y se conserva el que tenga mejor \textit{fitness}. Este operador introduce presión selectiva sin eliminar por completo la diversidad.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Población $P$}
+\KwOut{Índice del mejor individuo del torneo}
+
+Elegir tres índices aleatorios de $P$ con reemplazo\;
+Comparar sus valores de \textit{fitness}\;
+Devolver el índice con mejor aptitud\;
+\caption{Torneo de tamaño 3}
+\end{algorithm}
+
+\subsubsection{Operadores de cruce}
+Se emplean dos operadores de cruce para representación real. En ambos casos se generan dos descendientes a partir de dos padres.
+
+\begin{itemize}
+    \item \textbf{Cruce aritmético aleatorio:} para cada gen $i$, se genera un coeficiente aleatorio $\sigma_i \in [0,1]$ y se construyen los hijos como combinaciones convexas de los padres.
+    \item \textbf{Cruce BLX-$\alpha$:} para cada gen $i$, se toma el intervalo expandido definido por los valores de los padres y se muestrean los descendientes en ese rango. En esta práctica se usa $\alpha = 0{,}3$.
+\end{itemize}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Padres $P^1$ y $P^2$}
+\KwOut{Hijos $H^1$ y $H^2$}
+
+\For{cada posición $i$}{
+    Generar $\sigma_i \in [0,1]$\;
+    $H^1_i \leftarrow \sigma_i \cdot P^1_i + (1-\sigma_i) \cdot P^2_i$\;
+    $H^2_i \leftarrow \sigma_i \cdot P^2_i + (1-\sigma_i) \cdot P^1_i$\;
+}
+\caption{Cruce aritmético}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Padres $P^1$ y $P^2$, parámetro $\alpha$}
+\KwOut{Hijos $H^1$ y $H^2$}
+
+\For{cada posición $i$}{
+    $C_{min} \leftarrow \min(P^1_i, P^2_i)$\;
+    $C_{max} \leftarrow \max(P^1_i, P^2_i)$\;
+    $I \leftarrow C_{max} - C_{min}$\;
+    Definir el intervalo $[C_{min} - \alpha I,\, C_{max} + \alpha I]$\;
+    Generar $H^1_i$ y $H^2_i$ independientemente dentro de ese intervalo\;
+}
+\caption{Cruce BLX-$\alpha$}
+\end{algorithm}
+
+\subsubsection{Operador de mutación}
+La mutación se implementa como un traslado parcial de capital entre dos genes distintos. Con probabilidad por individuo, se selecciona un origen y un destino y se transfiere un porcentaje fijo del valor del primero al segundo. En esta práctica el porcentaje transferido es del 15\%.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Solución $S$}
+\KwOut{Solución mutada y reparada}
+
+Generar una probabilidad aleatoria para decidir si se muta el individuo\;
+\If{no se activa la mutación}{
+    \Return $S$
+}
+\If{la solución tiene menos de dos genes}{
+    \Return $S$
+}
+
+Elegir dos posiciones distintas $i$ y $j$ al azar\;
+$amount \leftarrow s_i \cdot 0.15$\;
+$s_i \leftarrow s_i - amount$\;
+$s_j \leftarrow s_j + amount$\;
+Aplicar reparación sobre la solución\;
+\caption{Mutación por transferencia}
+\end{algorithm}

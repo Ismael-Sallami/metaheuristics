@@ -1,0 +1,28 @@
+\section{Descripción y Formulación del Problema}
+\label{sec:formulacion}
+
+El Problema del Portfolio (basado en el modelo de Markowitz) busca determinar la asignación óptima de capital entre $N$ activos financieros para maximizar la rentabilidad esperada y minimizar el riesgo. La solución se codifica como un vector de pesos $w = (w_1, \dots, w_N)$, donde cada $w_i$ representa la proporción del presupuesto invertida en el activo $i$. Toda cartera válida debe satisfacer estrictamente dos restricciones:
+\begin{enumerate}[noitemsep]
+    \item \textbf{Presupuesto completo:} $\sum_{i=1}^{N} w_i = 1$. Computacionalmente, se admite una tolerancia de error de $10^{-8}$ frente a la imprecisión de la coma flotante.
+    \item \textbf{Límites de inversión:} $w_i \in \{0\} \cup [lo, hi], \forall i$. El peso debe ser cero, o estar acotado en el rango legal permitido.
+\end{enumerate}
+
+\subsection{Función Objetivo (Fitness)}
+Se plantea un problema de optimización que combina linealmente el beneficio y el riesgo mediante un factor de penalización $\lambda = 500$. La función a \textbf{maximizar} se compacta en la Ecuación \ref{eq:fitness}:
+
+\begin{equation}
+    fitness(w) = \underbrace{\sum_{i=1}^{N} w_i \sum_{t=1}^{T} \log(1+\mu_{it})}_{\text{Beneficio}} - \lambda \cdot \underbrace{\sqrt{\sum_{i=1}^{N} \sum_{j=1}^{N} w_i \cdot \Sigma_{ij} \cdot w_j}}_{\text{Riesgo}}
+    \label{eq:fitness}
+\end{equation}
+
+Donde $\mu_{it}$ es el retorno relativo del activo $i$ en el día $t$, y $\Sigma_{ij}$ la covarianza histórica entre los activos $i$ y $j$. El beneficio acumulado emplea logaritmos para simplificar el cálculo y estabilizar variaciones negativas.
+
+\textit{Nota sobre el cálculo del riesgo:} Acorde a las directrices de esta segunda fase, el modelo evalúa el riesgo utilizando la volatilidad de la cartera, es decir, la raíz cuadrada de la varianza ($w^\top \Sigma w$). El uso de la desviación típica permite medir la dispersión del riesgo en la misma escala y unidades que la rentabilidad esperada, siendo fieles a la formulación original.
+
+\subsection{Casos de Estudio}
+La experimentación emplea datos históricos reales del periodo 2015-2025 para tres índices bursátiles:
+\begin{itemize}[noitemsep]
+    \item \textbf{IBEX 35 ($N=30$):} Bolsa española. Límites permitidos: $lo=0.005$, $hi=0.08$.
+    \item \textbf{S\&P 100 ($N=97$):} Principales empresas EE.UU. Límites permitidos: $lo=0.005$, $hi=0.05$.
+    \item \textbf{S\&P 500 ($N=457$):} Empresas EE.UU. Límites permitidos: $lo=0.005$, $hi=0.02$.
+\end{itemize}

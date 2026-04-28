@@ -1,0 +1,157 @@
+\newpage
+\section{Estructura de los Métodos de Búsqueda y Algoritmos Específicos}
+\label{sec:algoritmos}
+
+En este apartado se detalla el pseudocódigo de cada algoritmo obligatorio de la
+práctica 2, manteniendo correspondencia directa con la implementación real.
+
+\subsection{Algoritmos Base de Referencia (Práctica 1)}
+
+Se mantienen en la comparativa para analizar la ganancia al pasar a técnicas
+poblacionales:
+
+\begin{itemize}[noitemsep]
+    \item Greedy constructivo.
+    \item Random Search.
+    \item BL primer mejor.
+\end{itemize}
+
+\subsection{AG Generacional Elitista (AGG)}
+
+Se implementan dos variantes: AGG-Arit y AGG-BLX. En ambas:
+
+\begin{itemize}[noitemsep]
+    \item Tamaño de población: 100.
+    \item Selección: torneo $k=3$.
+    \item Probabilidad de cruce: 0.8.
+    \item Mutación por individuo esperada: 0.1, aplicando transferencia entre dos genes.
+    \item Parada: 10.000 evaluaciones.
+    \item Reparación obligatoria tras cruce y mutación.
+    \item Reemplazo elitista: si el mejor padre supera al mejor hijo, sustituye al peor hijo.
+\end{itemize}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Problema $P$, presupuesto de evaluaciones}
+\KwOut{Mejor individuo encontrado}
+
+Inicializar y evaluar población $Pop$\;
+$Best \leftarrow$ mejor de $Pop$\;
+
+\While{quepa evaluar una nueva generación completa}{
+    Seleccionar padres por torneo $k=3$\;
+    Cruzar por parejas consecutivas (0-1, 2-3, \dots) con $P_c=0.8$\;
+    Mutar $0.1 \cdot |Pop|$ individuos elegidos aleatoriamente\;
+    Reparar y evaluar hijos\;
+
+    \tcp{Elitismo generacional}
+    \If{el mejor de la población anterior es mejor que el mejor hijo}{
+        Reemplazar peor hijo por ese elite\;
+    }
+
+    $Pop \leftarrow Hijos$\;
+    Actualizar mejor global\;
+}
+\Return $Best$\;
+\caption{AGG (AGG-Arit / AGG-BLX)}
+\label{alg:agg}
+\end{algorithm}
+
+\subsection{AG Estacionario (AGE)}
+
+Se implementan AGE-Arit y AGE-BLX. Diferencias clave frente a AGG:
+
+\begin{itemize}[noitemsep]
+    \item Se generan 2 hijos por iteración.
+    \item Cruce siempre activo ($P_c=1$).
+    \item Los hijos compiten contra los peores de la población.
+    \item Cada hijo se muta con la misma probabilidad por individuo que en AGG.
+\end{itemize}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Problema $P$, presupuesto de evaluaciones}
+\KwOut{Mejor individuo encontrado}
+
+Inicializar y evaluar población $Pop$\;
+$Best \leftarrow$ mejor de $Pop$\;
+
+\While{queden al menos 2 evaluaciones}{
+    Seleccionar 2 padres por torneo $k=3$\;
+    Cruzar siempre (Aritmético o BLX)\;
+    Mutar hijos\;
+    Reparar y evaluar ambos hijos\;
+
+    Reemplazar peor individuo por hijo 1 si mejora\;
+    Recalcular peor individuo y repetir con hijo 2\;
+
+    Actualizar mejor global\;
+}
+\Return $Best$\;
+\caption{AGE (AGE-Arit / AGE-BLX)}
+\label{alg:age}
+\end{algorithm}
+
+\subsection{Algoritmos Meméticos (AM)}
+
+Sobre el AGG utilizado como base experimental se construyen tres variantes:
+
+\begin{itemize}[noitemsep]
+    \item \textbf{AM-All}: BL suave a toda la población cada 10 generaciones.
+    \item \textbf{AM-Rand}: BL suave con probabilidad 0.1 por individuo.
+    \item \textbf{AM-Best}: BL suave al 10\% mejor de la población.
+\end{itemize}
+
+La BL interna es de primer mejor, con transferencias del 15\%, máximo de 100
+evaluaciones por invocación y actualización Lamarckiana del individuo si mejora.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Problema $P$, presupuesto de evaluaciones}
+\KwOut{Mejor individuo encontrado}
+
+Inicializar AGG base y evaluar población\;
+$gen \leftarrow 0$\;
+
+\While{haya presupuesto para seguir evolucionando}{
+    Ejecutar un ciclo generacional AGG (selección-cruce-mutación-reemplazo)\;
+    $gen \leftarrow gen+1$\;
+
+    \If{$gen \bmod 10 = 0$}{
+        Seleccionar subconjunto según variante (All/Rand/Best)\;
+        \For{cada individuo seleccionado}{
+            Ejecutar BL suave con presupuesto local acotado de hasta 100 evaluaciones\;
+            Sumar evaluaciones locales al contador global\;
+            \If{contador global alcanza 10.000}{\textbf{break}}\;
+        }
+    }
+
+    Actualizar mejor global\;
+}
+\Return $Best$\;
+\caption{AM-All, AM-Rand y AM-Best}
+\label{alg:am}
+\end{algorithm}
+
+\subsection{BL Suave Usada por los Meméticos}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Solución $s$, ratio $r=0.15$, máximo 100 evaluaciones}
+\KwOut{Solución mejorada}
+
+Generar vecindario de pares $(i,j)$ con $i\neq j$ y barajar\;
+\While{queden evaluaciones locales y existan pares sin probar}{
+    Tomar el siguiente par $(i,j)$\;
+    Probar movimiento de transferencia $r$ de $i$ a $j$\;
+    Validar límites y evaluar\;
+    \If{mejora}{
+        Aceptar vecino\;
+        Volver a barajar el vecindario\;
+        Reiniciar contador de vecinos sin mejora\;
+    }
+}
+\Return solución final\;
+\caption{Búsqueda local suave en AM}
+\label{alg:bl-suave}
+\end{algorithm}
