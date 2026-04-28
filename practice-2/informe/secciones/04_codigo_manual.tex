@@ -1,0 +1,88 @@
+\newpage
+\section{Estructura del Código y Manual de Usuario}
+\label{sec:manual}
+
+\subsection{Estructura del Proyecto}
+
+El código de la práctica se organiza en el directorio \texttt{code/} con estructura
+modular:
+
+\begin{itemize}[noitemsep]
+    \item \texttt{common/}: interfaces base del framework (\texttt{MH}, \texttt{Problem}, \texttt{Solution}, utilidades).
+    \item \texttt{inc/}: cabeceras de algoritmos y utilidades del problema.
+    \item \texttt{src/}: implementaciones C++.
+    \item \texttt{datos\_portfolio\_2526/}: ficheros CSV de IBEX 35, S\&P 100 y S\&P 500.
+    \item \texttt{config.cfg}: parametrización de experimentos sin recompilar.
+    \item \texttt{main.cpp}: orquestación global, ejecución y generación de tablas/CSV.
+    \item \texttt{genera\_boxplots.py}: script para figuras de distribución.
+\end{itemize}
+
+\subsection{Módulos Principales Implementados}
+
+\begin{itemize}[noitemsep]
+    \item Baselines: \texttt{greedy.cpp}, \texttt{randomsearch.h}, \texttt{localsearch.cpp}.
+    \item Variantes BL extra: \texttt{localsearch\_best.cpp}, \texttt{localsearch\_multistart.cpp}.
+    \item Infraestructura evolutiva común: \texttt{ea\_common.h}.
+    \item Algoritmos genéticos: \texttt{genetic\_algorithm.h/.cpp} (AGG/AGE, Arit/BLX).
+    \item Algoritmos meméticos: \texttt{memetic\_algorithm.h/.cpp} (AM-All/Rand/Best).
+    \item BL suave para AM: \texttt{soft\_local\_search.h/.cpp}.
+    \item DE: \texttt{differential\_evolution.h/.cpp}.
+    \item Mutación gaussiana: \texttt{gaussian\_mutation.h/.cpp}.
+    \item AM-LSCh: \texttt{memetic\_lsch.h/.cpp}.
+\end{itemize}
+
+\subsection{Manual de Usuario: Compilación y Ejecución}
+
+El proceso de compilación se ha automatizado completamente mediante \texttt{CMake} y \texttt{Make}. Para compilar el código, el usuario debe situarse en el directorio \texttt{code/} y ejecutar:
+
+\begin{lstlisting}[language=bash, frame=single]
+cmake .
+make
+\end{lstlisting}
+
+Este proceso genera un ejecutable llamado \texttt{main}.
+
+\textbf{Ejecución estándar:} Al iniciarse, el programa lee automáticamente el archivo \texttt{config.cfg}, por lo que no es necesario recompilar para cambiar hiperparámetros.
+
+\begin{lstlisting}[language=bash, frame=single]
+./main
+\end{lstlisting}
+
+\textbf{Sobrescritura de semilla por línea de comandos:} La semilla también puede pasarse como argumento, sobrescribiendo la del fichero de configuración:
+
+\begin{lstlisting}[language=bash, frame=single]
+./main 42
+\end{lstlisting}
+
+\subsection{Configuración de Experimentos sin Recompilación}
+
+El fichero \texttt{config.cfg} permite ajustar todos los parámetros de los algoritmos sin necesidad de recompilar. Entre los parámetros configurables están:
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Presupuesto global:} \texttt{max\_evaluations} (evaluaciones totales) y \texttt{num\_executions} (número de corridas).
+    \item \textbf{Algoritmos genéticos:} tamaño de población, probabilidad de cruce ($P_c$), probabilidad de mutación ($P_m$), parámetro BLX-$\alpha$.
+    \item \textbf{Algoritmos meméticos:} periodo de aplicación de BL (cada cuántas generaciones), presupuesto local de BL, ratio de transferencia en BL suave, probabilidad de selección en AM-Rand.
+    \item \textbf{Evolución diferencial:} factor de escalado ($F$), probabilidad de cruce ($CR$), tamaño de población.
+    \item \textbf{Flags de algoritmos:} para activar/desactivar bloques obligatorios (AGG, AGE, AM) y extras (DE, mutación gaussiana, AM-LSCh).
+\end{itemize}
+
+\subsection{Salida de Resultados y Visualización}
+
+Al finalizar su ejecución, el binario genera un resumen en pantalla que incluye:
+
+\begin{itemize}[noitemsep]
+    \item Tabla resumen por mercado con fitness, evaluaciones y tiempos de ejecución de cada algoritmo.
+    \item Mejor solución (\textit{fitness}) encontrada durante la ejecución.
+\end{itemize}
+
+El programa voltea automáticamente los datos en archivos \texttt{.csv} organizados por mercado, permitiendo el análisis posterior.
+
+Para obtener gráficas de distribución (boxplots) de los resultados, basta con ejecutar:
+
+\begin{lstlisting}[language=bash, frame=single]
+python3 genera_boxplots.py
+\end{lstlisting}
+
+Esto genera visualizaciones en formato \texttt{.png} que facilitan el análisis comparativo entre algoritmos.
+
+\textit{Nota: para esta práctica me gustaría destacar que se ha mejorado la documentación del código así como el código para generar boxplots.}
