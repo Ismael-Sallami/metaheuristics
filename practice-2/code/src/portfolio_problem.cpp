@@ -37,20 +37,21 @@ bool PortfolioProblem::isValid(const tSolution<double> &solution) {
 // For fitness we know it is benefit - lambda * risk, since the benefit uses logarithms, we calculate it in the problem class for efficiency reasons
 
 tFitness PortfolioProblem::fitness(const tSolution<double> &solution) {
-    double riesgo = 0.0;
-    double beneficio = 0.0;
+    double risk = 0.0;
+    double profit = 0.0;
 
     for (size_t i = 0; i < solution.size(); ++i) {
-        beneficio += solution[i] * m_data.logBenefits[i];
+        profit += solution[i] * m_data.logBenefits[i];
     }
 
     for (size_t i = 0; i < solution.size(); ++i) {
         for (size_t j = 0; j < solution.size(); ++j) {
-            riesgo += solution[i] * solution[j] * m_data.covariance[i][j];
+            risk += solution[i] * solution[j] * m_data.covariance[i][j];
         }
     }
 
-    return beneficio - (m_lambda * riesgo);
+    // in the pr2 the risk term is the portfolio standard deviation
+    return profit - m_lambda * sqrt(std::max(risk, 0.0)); // We use max to avoid negative values due to numerical issues
 }
 
 tSolution<double> PortfolioProblem::createSolution() {
@@ -181,25 +182,25 @@ void PortfolioProblem::fix(tSolution<double> &solution) {
 }
 
 double PortfolioProblem::getGreedyHeuristic(int companyIndex) {
-    double beneficio = m_data.logBenefits[companyIndex]; 
+    double profit = m_data.logBenefits[companyIndex]; 
     
-    double suma_covarianzas = 0.0;
+    double covariance_sum = 0.0;
     size_t n = getSolutionSize();
     for (size_t j = 0; j < n; ++j) {
-        suma_covarianzas += m_data.covariance[companyIndex][j];
+        covariance_sum += m_data.covariance[companyIndex][j];
     }
     
-    double heuristica = beneficio - (m_lambda * (suma_covarianzas / m_data.numDays)); 
+    double heuristic = profit - (m_lambda * sqrt(std::max(covariance_sum, 0.0))); 
     
-    return heuristica;
+    return heuristic;
 }
 
-double PortfolioProblem::getBeneficio(const tSolution<double> &solution) {
-    double beneficio = 0.0;
+double PortfolioProblem::getProfit(const tSolution<double> &solution) {
+    double profit = 0.0;
 
     for (size_t i = 0; i < solution.size(); ++i) {
-        beneficio += solution[i] * m_data.logBenefits[i];
+        profit += solution[i] * m_data.logBenefits[i];
     }
 
-    return beneficio;
+    return profit;
 }

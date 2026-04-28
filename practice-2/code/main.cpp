@@ -1,7 +1,7 @@
 /**
  * @file main.cpp
  * @brief Lab for testing Portfolio Optimization algorithms.
- * @details Runs three algorithms on historical data (2015-2024) and tests on 2025.
+ * @details Runs algorithms.
  */
 
 #include <iostream>
@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <stdexcept>
 #include <fstream>
+#include <sstream>
 
 // Config reader
 #include "config_reader.h"
@@ -26,43 +27,99 @@
 #include "localsearch.h"
 #include "localsearch_best.h"
 #include "localsearch_multistart.h"
+#include "memetic_algorithm.h"
+#include "genetic_algorithm.h"
+#include "memetic_lsch.h"
+#include "differential_evolution.h"
 
 using namespace std;
 using namespace std::chrono;
 
-// Data Structures
+namespace ui
+{
+    // ANSI styles for terminal output.
+    const string RESET = "\033[0m";
+    const string BOLD = "\033[1m";
+    const string DIM = "\033[2m";
+
+    const string CYAN = "\033[36m";
+    const string BLUE = "\033[34m";
+    const string GREEN = "\033[32m";
+    const string YELLOW = "\033[33m";
+    const string RED = "\033[31m";
+    const string MAGENTA = "\033[35m";
+
+    string colorize(const string &text, const string &color)
+    {
+        return color + text + RESET;
+    }
+
+    string pad_double(double value, int width, int precision = 3)
+    {
+        ostringstream oss;
+        oss << right << setw(width) << fixed << setprecision(precision) << value;
+        return oss.str();
+    }
+
+    string pad_int(int value, int width)
+    {
+        ostringstream oss;
+        oss << right << setw(width) << value;
+        return oss.str();
+    }
+
+    string color_metric(double value, int width, int precision = 3)
+    {
+        const string padded = pad_double(value, width, precision);
+        if (value > 0.0)
+            return colorize(padded, GREEN);
+        if (value < 0.0)
+            return colorize(padded, RED);
+        return colorize(padded, YELLOW);
+    }
+
+    string separator(int width)
+    {
+        return colorize(string(width, '-'), DIM);
+    }
+}
+
+// Data structures
 
 // Info about a stock market
-struct Mercado
+struct Market
 {
-    string nombre;
-    string ruta_csv;
-    double limite_inferior; // Min investment
-    double limite_superior; // Max investment
+    string name;
+    string csv_path;
+    double lower_bound; // Min investment
+    double upper_bound; // Max investment
 };
 
 // Results from an algorithm run
-struct Estadisticas
+struct Statistics
 {
-    double media_fitness_train;  // Average fitness on 2015-2024
-    double media_fitness_test;   // Average fitness on 2025
-    double media_beneficio_test; // Actual profit on 2025
-    double desviacion_tipica;    // Standard deviation on training
-    double tiempo_medio_segundos;
-    double evaluaciones_medias;
-    vector<double> historico_fitness; // All fitness values for boxplots
+    double mean_train_fitness;  // Average fitness on 2015-2024
+    double mean_test_fitness;   // Average fitness on 2025
+    double mean_test_profit; // Actual profit on 2025
+    double standard_deviation;    // Standard deviation on training
+    double mean_time_seconds;
+    double mean_evaluations;
+    vector<double> fitness_history; // All fitness values for boxplots
 };
 
-
 // Run a stochastic algorithm multiple times
-Estadisticas ejecutar_experimento_estocastico(MH<double> &algoritmo, PortfolioProblem &prob_train,
-                                              PortfolioProblem &prob_test, int num_ejecuciones,
-                                              int max_evals, long int base_seed)
+Statistics run_stochastic_experiment(
+    MH<double> &algoritmo,
+    PortfolioProblem &prob_train,
+    PortfolioProblem &prob_test,
+    int num_executions,
+    int max_evals,
+    long int base_seed)
 {
-    Estadisticas stats = {0, 0, 0, 0, 0, 0, {}};
-    stats.historico_fitness.reserve(num_ejecuciones);
+    Statistics results = {0, 0, 0, 0, 0, 0, {}};
+    results.fitness_history.reserve(num_executions);
 
-    for (int i = 0; i < num_ejecuciones; ++i)
+    for (int i = 0; i < num_executions; ++i)
     {
         Random::seed(base_seed + i);
 
@@ -73,41 +130,43 @@ Estadisticas ejecutar_experimento_estocastico(MH<double> &algoritmo, PortfolioPr
 
         // Test weights on 2025
         double fitness_2025 = prob_test.fitness(resultado.solution);
-        double beneficio_2025 = prob_test.getBeneficio(resultado.solution);
+        double profit_2025 = prob_test.getProfit(resultado.solution);
 
         // Accumulate metrics
-        stats.media_fitness_train += resultado.fitness;
-        stats.media_fitness_test += fitness_2025;
-        stats.media_beneficio_test += beneficio_2025;
-        stats.tiempo_medio_segundos += duration<double>(fin - inicio).count();
-        stats.evaluaciones_medias += resultado.evaluations;
+        results.mean_train_fitness += resultado.fitness;
+        results.mean_test_fitness += fitness_2025;
+        results.mean_test_profit += profit_2025;
+        results.mean_time_seconds += duration<double>(fin - inicio).count();
+        results.mean_evaluations += resultado.evaluations;
 
-        stats.historico_fitness.push_back(resultado.fitness);
+        results.fitness_history.push_back(resultado.fitness);
     }
 
     // Calculate averages
-    stats.media_fitness_train /= num_ejecuciones;
-    stats.media_fitness_test /= num_ejecuciones;
-    stats.media_beneficio_test /= num_ejecuciones;
-    stats.tiempo_medio_segundos /= num_ejecuciones;
-    stats.evaluaciones_medias /= num_ejecuciones;
+    results.mean_train_fitness /= num_executions;
+    results.mean_test_fitness /= num_executions;
+    results.mean_test_profit /= num_executions;
+    results.mean_time_seconds /= num_executions;
+    results.mean_evaluations /= num_executions;
 
     // Calculate standard deviation
-    double varianza = 0.0;
-    for (double f : stats.historico_fitness)
+    double variance = 0.0;
+    for (double fitness : results.fitness_history)
     {
-        varianza += pow(f - stats.media_fitness_train, 2);
+        variance += pow(fitness - results.mean_train_fitness, 2);
     }
-    stats.desviacion_tipica = sqrt(varianza / num_ejecuciones);
+    results.standard_deviation = sqrt(variance / num_executions);
 
-    return stats;
+    return results;
 }
 
 // Run a deterministic algorithm once
-Estadisticas ejecutar_experimento_determinista(MH<double> &algoritmo, PortfolioProblem &prob_train,
-                                               PortfolioProblem &prob_test)
+Statistics run_deterministic_experiment(
+    MH<double> &algoritmo,
+    PortfolioProblem &prob_train,
+    PortfolioProblem &prob_test)
 {
-    Estadisticas stats = {0, 0, 0, 0, 0, 0, {}};
+    Statistics results = {0, 0, 0, 0, 0, 0, {}};
 
     auto inicio = high_resolution_clock::now();
     auto resultado = algoritmo.optimize(prob_train, 1);
@@ -115,20 +174,59 @@ Estadisticas ejecutar_experimento_determinista(MH<double> &algoritmo, PortfolioP
 
     // Test weights on 2025
     double fitness_2025 = prob_test.fitness(resultado.solution);
-    double beneficio_2025 = prob_test.getBeneficio(resultado.solution);
+    double profit_2025 = prob_test.getProfit(resultado.solution);
 
-    stats.media_fitness_train = resultado.fitness;
-    stats.media_fitness_test = fitness_2025;
-    stats.media_beneficio_test = beneficio_2025;
-    stats.tiempo_medio_segundos = duration<double>(fin - inicio).count();
-    stats.evaluaciones_medias = 1.0;
-    stats.desviacion_tipica = 0.0;
+    results.mean_train_fitness = resultado.fitness;
+    results.mean_test_fitness = fitness_2025;
+    results.mean_test_profit = profit_2025;
+    results.mean_time_seconds = duration<double>(fin - inicio).count();
+    results.mean_evaluations = resultado.evaluations;
+    results.standard_deviation = 0.0;
 
-    stats.historico_fitness.push_back(resultado.fitness);
+    results.fitness_history.push_back(resultado.fitness);
 
-    return stats;
+    return results;
 }
 
+void print_header()
+{
+    const int width_total = 121;
+    cout << ui::separator(width_total) << "\n";
+    cout << ui::colorize(ui::BOLD + string("Results Table"), ui::BLUE) << "\n";
+    cout << ui::separator(width_total) << "\n";
+    cout << ui::colorize((ostringstream() << left << setw(16) << "Algorithm"
+                        << right << setw(14) << "Train"
+                        << setw(14) << "Test"
+                        << setw(14) << "Profit"
+                        << setw(14) << "Std"
+                        << setw(14) << "Evals"
+                        << setw(14) << "Time(s)"
+                        << setw(21) << "").str(), ui::BOLD + ui::MAGENTA) << "\n";
+    cout << ui::separator(width_total) << "\n";
+}
+
+void print_row(const string &name, const Statistics &s)
+{
+    ostringstream name_col;
+    name_col << left << setw(16) << name;
+
+    cout << ui::colorize(name_col.str(), ui::CYAN)
+         << ui::color_metric(s.mean_train_fitness, 14)
+         << ui::color_metric(s.mean_test_fitness, 14)
+         << ui::color_metric(s.mean_test_profit, 14)
+         << ui::color_metric(s.standard_deviation, 14)
+         << ui::colorize(ui::pad_int(static_cast<int>(s.mean_evaluations), 14), ui::YELLOW)
+         << ui::colorize(ui::pad_double(s.mean_time_seconds, 14), ui::BLUE)
+         << "\n";
+}
+
+void append_csv_rows(ofstream &csv, const string &alg_name, const vector<double> &values)
+{
+    for (double f : values)
+    {
+        csv << alg_name << "," << f << "\n";
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -141,152 +239,323 @@ int main(int argc, char *argv[])
         config.seed = atoi(argv[1]);
     }
 
-    vector<Mercado> mercados;
+    vector<Market> markets;
 
     // Setup markets
     if (config.use_custom_market == 1)
     {
-        cout << "\n [INFO] CUSTOM mode ON. Running only config market.\n";
-        mercados.push_back({config.custom_name,
-                            config.custom_path,
-                            config.custom_lo,
-                            config.custom_hi});
+        cout << "\n" << ui::colorize("[INFO]", ui::GREEN) << " "
+             << "CUSTOM mode ON. Running only config market.\n";
+        markets.push_back({config.custom_name,
+                  config.custom_path,
+                  config.custom_lo,
+                  config.custom_hi});
     }
     else
     {
         // Default 3 markets
-        mercados = {
+        markets = {
             {"IBEX 35", "datos_portfolio_2526/ibex_35.csv", 0.005, 0.08},
             {"S&P 100", "datos_portfolio_2526/syp_100.csv", 0.005, 0.05},
             {"S&P 500", "datos_portfolio_2526/syp_500.csv", 0.005, 0.02}};
     }
 
-    RandomSearch<double> alg_random;
-    GreedySearch alg_greedy;
-    LocalSearch alg_local(config.ls_ratio);
-    LocalSearchBest alg_local_best(config.ls_ratio);
-    LocalSearchMultiStart alg_local_multi(config.ls_ratio);
+        cout << "\n" << ui::colorize(string(62, '='), ui::DIM) << "\n";
+        cout << ui::colorize(ui::BOLD + string("Portfolio Optimization Pr2 - Baselines + AG/AM/DE"), ui::BLUE) << "\n";
+        cout << ui::colorize("[PARAMS]", ui::MAGENTA) << " seed=" << config.seed
+         << " lambda=" << config.lambda
+         << " evals=" << config.max_evaluations
+         << " runs=" << config.num_executions << "\n";
+        cout << ui::colorize(string(62, '='), ui::DIM) << "\n\n";
 
-    const int MAX_EVALUACIONES = 10000;
-    const int NUM_EJECUCIONES = 50;
-
-    cout << "\n===================================================================" << endl;
-    cout << "   PORTFOLIO OPTIMIZATION ENGINE (MARKOWITZ)                      " << endl;
-    cout << "   Train (2015-2024) vs Test (2025)                               " << endl;
-    cout << "   [PARAMS] Seed: " << config.seed
-         << " | Lambda: " << config.lambda
-         << " | LS_Ratio: " << config.ls_ratio << endl;
-    cout << "   [LIMITS] Evals: " << config.max_evaluaciones
-         << " | Runs: " << config.num_ejecuciones << endl;
-    cout << "===================================================================\n"
-         << endl;
-
-    for (const auto &mercado : mercados)
+    for (const auto &market : markets)
     {
         try
         {
-            // Create two problems: train and test
-            PortfolioProblem prob_train(mercado.ruta_csv, mercado.limite_inferior, mercado.limite_superior, false, config.lambda);
-            PortfolioProblem prob_test(mercado.ruta_csv, mercado.limite_inferior, mercado.limite_superior, true, config.lambda);
+            PortfolioProblem prob_train(
+                market.csv_path,
+                market.lower_bound,
+                market.upper_bound,
+                false,
+                config.lambda);
+            PortfolioProblem prob_test(
+                market.csv_path,
+                market.lower_bound,
+                market.upper_bound,
+                true,
+                config.lambda);
 
-            Estadisticas stats_gr = ejecutar_experimento_determinista(alg_greedy, prob_train, prob_test);
-            Estadisticas stats_rs = ejecutar_experimento_estocastico(alg_random, prob_train, prob_test, NUM_EJECUCIONES, MAX_EVALUACIONES, config.seed);
-            Estadisticas stats_ls = ejecutar_experimento_estocastico(alg_local, prob_train, prob_test, NUM_EJECUCIONES, MAX_EVALUACIONES, config.seed);
-            Estadisticas stats_ls_best = ejecutar_experimento_estocastico(alg_local_best, prob_train, prob_test, NUM_EJECUCIONES, MAX_EVALUACIONES, config.seed);
-            Estadisticas stats_ls_multi = ejecutar_experimento_estocastico(alg_local_multi, prob_train, prob_test, NUM_EJECUCIONES, MAX_EVALUACIONES, config.seed);
+            RandomSearch<double> alg_random;
+            GreedySearch alg_greedy;
+            LocalSearch alg_local(config.ls_ratio);
+            LocalSearchBest alg_local_best(config.ls_ratio);
+            LocalSearchMultiStart alg_local_multi(config.ls_ratio);
 
-            // Print results table
-            cout << "\nResults: " << mercado.nombre << " (Averages)\n";
-            cout << string(95, '-') << "\n";
-            cout << left << setw(15) << "Algorithm"
-                 << right << setw(15) << "2015-2024"
-                 << setw(25) << "2025"
-                 << setw(18) << "Evaluations"
-                 << setw(20) << "Time (s)" << "\n";
+            Statistics s_gr = run_deterministic_experiment(alg_greedy, prob_train, prob_test);
+            Statistics s_rs = run_stochastic_experiment(
+                alg_random, prob_train, prob_test,
+                config.num_executions, config.max_evaluations, config.seed);
+            Statistics s_ls = run_stochastic_experiment(
+                alg_local, prob_train, prob_test,
+                config.num_executions, config.max_evaluations, config.seed);
+            Statistics s_lsb = run_stochastic_experiment(
+                alg_local_best, prob_train, prob_test,
+                config.num_executions, config.max_evaluations, config.seed);
+            Statistics s_lsm = run_stochastic_experiment(
+                alg_local_multi, prob_train, prob_test,
+                config.num_executions, config.max_evaluations, config.seed);
 
-            cout << left << setw(15) << ""
-                 << right << setw(15) << "Fitness"
-                 << setw(12) << "Fitness" << setw(13) << "Profit"
-                 << setw(18) << "" << setw(20) << "" << "\n";
-            cout << string(95, '-') << "\n";
+            Statistics s_agg_arit = {}; // generational genetic algorithm with arithmetic crossover
+            Statistics s_agg_blx = {}; // generational genetic algorithm with BLX crossover
+            Statistics s_age_arit = {}; // steady-state genetic algorithm with arithmetic crossover
+            Statistics s_age_blx = {}; // steady-state genetic algorithm with BLX crossover
+            Statistics s_am_all = {}; // memetic algorithm with all local search
+            Statistics s_am_rand = {}; // memetic algorithm with random local search
+            Statistics s_am_best = {}; // memetic algorithm with best local search
+            Statistics s_de = {}; // differential evolution
+            Statistics s_agg_gauss = {}; // generational genetic algorithm with Gaussian mutation
+            Statistics s_am_lsch = {}; // memetic algorithm with Local Search Chains
 
+            CrossoverType best_agg_crossover = CrossoverType::ARITHMETIC;
+
+            if (config.exp_run_ag_am == 1)
+            {
+                GeneticAlgorithm agg_arit(
+                    GAScheme::AGG,
+                    CrossoverType::ARITHMETIC,
+                    config.ga_pop_size,
+                    config.ga_pc_agg,
+                    config.ga_pm_indiv,
+                    config.ga_blx_alpha,
+                    config.ga_mutation_ratio);
+                GeneticAlgorithm agg_blx(
+                    GAScheme::AGG,
+                    CrossoverType::BLX,
+                    config.ga_pop_size,
+                    config.ga_pc_agg,
+                    config.ga_pm_indiv,
+                    config.ga_blx_alpha,
+                    config.ga_mutation_ratio);
+                GeneticAlgorithm age_arit(
+                    GAScheme::AGE,
+                    CrossoverType::ARITHMETIC,
+                    config.ga_pop_size,
+                    config.ga_pc_age,
+                    config.ga_pm_indiv,
+                    config.ga_blx_alpha,
+                    config.ga_mutation_ratio);
+                GeneticAlgorithm age_blx(
+                    GAScheme::AGE,
+                    CrossoverType::BLX,
+                    config.ga_pop_size,
+                    config.ga_pc_age,
+                    config.ga_pm_indiv,
+                    config.ga_blx_alpha,
+                    config.ga_mutation_ratio);
+
+                GeneticAlgorithm agg_gauss(
+                    GAScheme::AGG,
+                    CrossoverType::ARITHMETIC,
+                    config.ga_pop_size,
+                    config.ga_pc_agg,
+                    config.ga_pm_indiv,
+                    config.ga_blx_alpha,
+                    config.ga_mutation_ratio,
+                    MutationType::GAUSSIAN,
+                    config.ga_gaussian_sigma);
+
+                s_agg_arit = run_stochastic_experiment(
+                    agg_arit, prob_train, prob_test,
+                    config.num_executions, config.max_evaluations, config.seed);
+                s_agg_blx = run_stochastic_experiment(
+                    agg_blx, prob_train, prob_test,
+                    config.num_executions, config.max_evaluations, config.seed);
+                s_age_arit = run_stochastic_experiment(
+                    age_arit, prob_train, prob_test,
+                    config.num_executions, config.max_evaluations, config.seed);
+                s_age_blx = run_stochastic_experiment(
+                    age_blx, prob_train, prob_test,
+                    config.num_executions, config.max_evaluations, config.seed);
+
+                if (config.exp_run_gaussian == 1)
+                {
+                    s_agg_gauss = run_stochastic_experiment(
+                        agg_gauss, prob_train, prob_test,
+                        config.num_executions, config.max_evaluations, config.seed);
+                }
+
+                best_agg_crossover =
+                    (s_agg_blx.mean_train_fitness > s_agg_arit.mean_train_fitness)
+                        ? CrossoverType::BLX
+                        : CrossoverType::ARITHMETIC;
+
+                MemeticAlgorithm am_all(
+                    MemeticVariant::ALL,
+                    best_agg_crossover,
+                    config.ga_pop_size,
+                    config.ga_pc_agg,
+                    config.ga_pm_indiv,
+                    config.ga_blx_alpha,
+                    config.ga_mutation_ratio,
+                    config.am_ls_period,
+                    config.am_ls_max_evals,
+                    config.am_ls_ratio,
+                    config.am_pls_rand);
+                MemeticAlgorithm am_rand(
+                    MemeticVariant::RAND,
+                    best_agg_crossover,
+                    config.ga_pop_size,
+                    config.ga_pc_agg,
+                    config.ga_pm_indiv,
+                    config.ga_blx_alpha,
+                    config.ga_mutation_ratio,
+                    config.am_ls_period,
+                    config.am_ls_max_evals,
+                    config.am_ls_ratio,
+                    config.am_pls_rand);
+                MemeticAlgorithm am_best(
+                    MemeticVariant::BEST,
+                    best_agg_crossover,
+                    config.ga_pop_size,
+                    config.ga_pc_agg,
+                    config.ga_pm_indiv,
+                    config.ga_blx_alpha,
+                    config.ga_mutation_ratio,
+                    config.am_ls_period,
+                    config.am_ls_max_evals,
+                    config.am_ls_ratio,
+                    config.am_pls_rand);
+
+                s_am_all = run_stochastic_experiment(
+                    am_all, prob_train, prob_test,
+                    config.num_executions, config.max_evaluations, config.seed);
+                s_am_rand = run_stochastic_experiment(
+                    am_rand, prob_train, prob_test,
+                    config.num_executions, config.max_evaluations, config.seed);
+                s_am_best = run_stochastic_experiment(
+                    am_best, prob_train, prob_test,
+                    config.num_executions, config.max_evaluations, config.seed);
+
+                if (config.exp_run_lsch == 1)
+                {
+                    MemeticLSCh am_lsch(
+                        best_agg_crossover,
+                        config.ga_pop_size,
+                        config.ga_pc_agg,
+                        config.ga_pm_indiv,
+                        config.ga_blx_alpha,
+                        config.ga_mutation_ratio,
+                        config.am_ls_period,
+                        config.am_ls_ratio,
+                        config.am_lsch_i_str);
+
+                    s_am_lsch = run_stochastic_experiment(
+                        am_lsch, prob_train, prob_test,
+                        config.num_executions, config.max_evaluations, config.seed);
+                }
+            }
+
+            if (config.exp_run_extras == 1)
+            {
+                DifferentialEvolution de(config.de_f, config.de_cr, config.de_pop_size);
+                s_de = run_stochastic_experiment(
+                    de, prob_train, prob_test,
+                    config.num_executions, config.max_evaluations, config.seed);
+            }
+
+              cout << "\n" << ui::colorize("Market:", ui::BOLD + ui::MAGENTA) << " "
+                  << ui::colorize(market.name, ui::BOLD + ui::CYAN) << "\n";
             cout << fixed << setprecision(3);
 
-            // Greedy row
-            cout << left << setw(15) << "Greedy"
-                 << right << setw(15) << stats_gr.media_fitness_train
-                 << setw(12) << stats_gr.media_fitness_test
-                 << setw(13) << stats_gr.media_beneficio_test
-                 << setw(18) << (int)stats_gr.evaluaciones_medias
-                 << setw(20) << stats_gr.tiempo_medio_segundos << "\n";
+            print_header();
+            print_row("Greedy", s_gr);
+            print_row("Random", s_rs);
+            print_row("BL", s_ls);
+            print_row("BL Best", s_lsb);
+            print_row("BL Multi", s_lsm);
 
-            // Random row
-            cout << left << setw(15) << "Random"
-                 << right << setw(15) << stats_rs.media_fitness_train
-                 << setw(12) << stats_rs.media_fitness_test
-                 << setw(13) << stats_rs.media_beneficio_test
-                 << setw(18) << (int)stats_rs.evaluaciones_medias
-                 << setw(20) << stats_rs.tiempo_medio_segundos << "\n";
+            if (config.exp_run_ag_am == 1)
+            {
+                print_row("AGG-Arit", s_agg_arit);
+                print_row("AGG-BLX", s_agg_blx);
+                print_row("AGE-Arit", s_age_arit);
+                print_row("AGE-BLX", s_age_blx);
+                print_row("AM-All", s_am_all);
+                print_row("AM-Rand", s_am_rand);
+                print_row("AM-Best", s_am_best);
+                if (config.exp_run_gaussian == 1)
+                {
+                    print_row("AGG-Gauss", s_agg_gauss);
+                }
+                if (config.exp_run_lsch == 1)
+                {
+                    print_row("AM-LSCh", s_am_lsch);
+                }
+            }
 
-            // Local Search row
-            cout << left << setw(15) << "BL"
-                 << right << setw(15) << stats_ls.media_fitness_train
-                 << setw(12) << stats_ls.media_fitness_test
-                 << setw(13) << stats_ls.media_beneficio_test
-                 << setw(18) << (int)stats_ls.evaluaciones_medias
-                 << setw(20) << stats_ls.tiempo_medio_segundos << "\n";
-
-            // Best Local Search row
-            cout << left << setw(15) << "BL Best"
-                 << right << setw(15) << stats_ls_best.media_fitness_train
-                 << setw(12) << stats_ls_best.media_fitness_test
-                 << setw(13) << stats_ls_best.media_beneficio_test
-                 << setw(18) << (int)stats_ls_best.evaluaciones_medias
-                 << setw(20) << stats_ls_best.tiempo_medio_segundos << "\n";
-
-            cout << left << setw(15) << "BL Multi"
-                 << right << setw(15) << stats_ls_multi.media_fitness_train
-                 << setw(12) << stats_ls_multi.media_fitness_test
-                 << setw(13) << stats_ls_multi.media_beneficio_test
-                 << setw(18) << (int)stats_ls_multi.evaluaciones_medias
-                 << setw(20) << stats_ls_multi.tiempo_medio_segundos << "\n";
-
-            cout << string(95, '-') << "\n";
+            if (config.exp_run_extras == 1)
+            {
+                print_row("DE", s_de);
+            }
+            cout << ui::separator(121) << "\n";
 
             // Save results to CSV
-            string nombre_limpio = mercado.nombre;
-            for (char &c : nombre_limpio)
-                if (c == ' ' || c == '&')
-                    c = '_';
-            string nombre_archivo = nombre_limpio + "_resultados.csv";
-
-            ofstream archivo_csv(nombre_archivo);
-            if (archivo_csv.is_open())
+            string clean_name = market.name;
+            for (char &c : clean_name)
             {
-                archivo_csv << "alg,fitness\n";
-                for (double f : stats_rs.historico_fitness)
-                    archivo_csv << "RandomSearch," << f << "\n";
-                for (double f : stats_gr.historico_fitness)
-                    archivo_csv << "GreedySearch," << f << "\n";
-                for (double f : stats_ls.historico_fitness)
-                    archivo_csv << "LocalSearch," << f << "\n";
-                for (double f : stats_ls_best.historico_fitness)
-                    archivo_csv << "LocalSearchBest," << f << "\n";
-                for (double f : stats_ls_multi.historico_fitness)
-                    archivo_csv << "LocalSearchMulti," << f << "\n";
-                archivo_csv.close();
+                if (c == ' ')
+                    c = '_';
+            }
+            string csv_name = clean_name + "_results.csv";
+
+            ofstream csv(csv_name);
+            if (!csv.is_open())
+            {
+                cout << " " << ui::colorize("[WARNING]", ui::YELLOW)
+                     << " Could not create CSV for " << market.name << "\n";
             }
             else
             {
-                cout << " [WARNING] Could not create CSV for " << mercado.nombre << "\n";
+                csv << "alg,fitness\n";
+                append_csv_rows(csv, "RANDOMSEARCH", s_rs.fitness_history);
+                append_csv_rows(csv, "GREEDYSEARCH", s_gr.fitness_history);
+                append_csv_rows(csv, "LOCALSEARCH", s_ls.fitness_history);
+                append_csv_rows(csv, "LOCALSEARCHBEST", s_lsb.fitness_history);
+                append_csv_rows(csv, "LOCALSEARCHMULTI", s_lsm.fitness_history);
+
+                if (config.exp_run_ag_am == 1)
+                {
+                    append_csv_rows(csv, "AGG-ARIT", s_agg_arit.fitness_history);
+                    append_csv_rows(csv, "AGG-BLX", s_agg_blx.fitness_history);
+                    append_csv_rows(csv, "AGE-ARIT", s_age_arit.fitness_history);
+                    append_csv_rows(csv, "AGE-BLX", s_age_blx.fitness_history);
+                    append_csv_rows(csv, "AM-ALL", s_am_all.fitness_history);
+                    append_csv_rows(csv, "AM-RAND", s_am_rand.fitness_history);
+                    append_csv_rows(csv, "AM-BEST", s_am_best.fitness_history);
+                    if (config.exp_run_gaussian == 1)
+                    {
+                        append_csv_rows(csv, "AGG-GAUSS", s_agg_gauss.fitness_history);
+                    }
+                    if (config.exp_run_lsch == 1)
+                    {
+                        append_csv_rows(csv, "AM-LSCH", s_am_lsch.fitness_history);
+                    }
+                }
+
+                if (config.exp_run_extras == 1)
+                {
+                    append_csv_rows(csv, "DE", s_de.fitness_history);
+                }
             }
         }
         catch (const exception &e)
         {
-            cout << "\n [ERROR] Failed to process " << mercado.nombre << ": " << e.what() << "\n\n";
+            cout << "\n " << ui::colorize("[ERROR]", ui::RED)
+                 << " Failed to process " << market.name << ": " << e.what() << "\n\n";
         }
     }
 
-    cout << "\n>>> Done. Results saved to CSV files." << endl;
+    cout << "\n" << ui::colorize(ui::BOLD + string(">>> Done."), ui::GREEN)
+         << " Results saved to CSV files." << endl;
     return 0;
 }

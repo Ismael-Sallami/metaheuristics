@@ -9,72 +9,72 @@ using namespace std;
 
 ResultMH<double> LocalSearchBest::optimize(Problem<double> &problem, int maxevals) {
     size_t n = problem.getSolutionSize();
-    auto limites = problem.getSolutionDomainRange();
-    double lo = limites.first;
-    double hi = limites.second;
+    auto bounds = problem.getSolutionDomainRange();
+    double lo = bounds.first;
+    double hi = bounds.second;
 
     tSolution<double> current_sol = problem.createSolution();
     tFitness current_fitness = problem.fitness(current_sol);
     int evals = 1;
 
     // Generate all possible pairs for the neighborhood
-    vector<pair<int, int>> entorno;
+    vector<pair<int, int>> neighborhood;
     for (size_t i = 0; i < n; ++i) {
         for (size_t j = 0; j < n; ++j) {
             if (i != j) {
-                entorno.push_back({i, j});
+                neighborhood.push_back({i, j});
             }
         }
     }
 
-    bool mejora_encontrada = true;
+    bool improvement_found = true;
 
-    while (evals < maxevals && mejora_encontrada) {
-        mejora_encontrada = false;
+    while (evals < maxevals && improvement_found) {
+        improvement_found = false;
 
         // Shuffle the neighborhood to avoid bias when hitting evaluation limits
-        Random::shuffle(entorno);
+        Random::shuffle(neighborhood);
 
-        tSolution<double> mejor_vecino_sol = current_sol;
-        tFitness mejor_vecino_fitness = -INFINITY; // Initialize with very low value
+        tSolution<double> best_neighbor_solution = current_sol;
+        tFitness best_neighbor_fitness = -INFINITY; // Initialize with very low value
 
         // Explore the entire neighborhood (or until we run out of evaluations)
-        for (const auto& par : entorno) {
+        for (const auto& pair : neighborhood) {
             if (evals >= maxevals) break; 
 
-            int i = par.first;
-            int j = par.second;
+            int i = pair.first;
+            int j = pair.second;
 
             if (current_sol[i] == 0.0) continue;
 
-            double trasvase = current_sol[i] * m_ratio;
-            double nuevo_i = current_sol[i] - trasvase;
-            double nuevo_j = current_sol[j] + trasvase;
+            double transfer = current_sol[i] * m_ratio;
+            double new_i = current_sol[i] - transfer;
+            double new_j = current_sol[j] + transfer;
 
-            bool valido_i = (nuevo_i < 1e-8) || (nuevo_i >= lo && nuevo_i <= hi);
-            bool valido_j = (nuevo_j < 1e-8) || (nuevo_j >= lo && nuevo_j <= hi);
+            bool valid_i = (new_i < 1e-8) || (new_i >= lo && new_i <= hi);
+            bool valid_j = (new_j < 1e-8) || (new_j >= lo && new_j <= hi);
 
-            if (!valido_i || !valido_j) continue;
+            if (!valid_i || !valid_j) continue;
 
             tSolution<double> neighbor = current_sol;
-            neighbor[i] = (nuevo_i < 1e-8) ? 0.0 : nuevo_i; 
-            neighbor[j] = (nuevo_j < 1e-8) ? 0.0 : nuevo_j;
+            neighbor[i] = (new_i < 1e-8) ? 0.0 : new_i; 
+            neighbor[j] = (new_j < 1e-8) ? 0.0 : new_j;
 
             tFitness neighbor_fitness = problem.fitness(neighbor);
             evals++;
 
             // Keep the best neighbor found in this iteration
-            if (neighbor_fitness > mejor_vecino_fitness) {
-                mejor_vecino_fitness = neighbor_fitness;
-                mejor_vecino_sol = neighbor;
+            if (neighbor_fitness > best_neighbor_fitness) {
+                best_neighbor_fitness = neighbor_fitness;
+                best_neighbor_solution = neighbor;
             }
         }
 
         // Check if the best neighbor is better than the current solution
-        if (mejor_vecino_fitness > current_fitness) {
-            current_sol = mejor_vecino_sol;
-            current_fitness = mejor_vecino_fitness;
-            mejora_encontrada = true;
+        if (best_neighbor_fitness > current_fitness) {
+            current_sol = best_neighbor_solution;
+            current_fitness = best_neighbor_fitness;
+            improvement_found = true;
         }
     }
 

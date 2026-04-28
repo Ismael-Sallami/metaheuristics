@@ -8,9 +8,9 @@ using namespace std;
 
 ResultMH<double> LocalSearchMultiStart::optimize(Problem<double> &problem, int maxevals) {
     size_t n = problem.getSolutionSize();
-    auto limites = problem.getSolutionDomainRange();
-    double lo = limites.first;
-    double hi = limites.second;
+    auto bounds = problem.getSolutionDomainRange();
+    double lo = bounds.first;
+    double hi = bounds.second;
 
     int evals = 0;
     
@@ -19,10 +19,10 @@ ResultMH<double> LocalSearchMultiStart::optimize(Problem<double> &problem, int m
     tFitness global_best_fitness = -1e9; // Initialize very low
 
     // Generate the neighborhood (pairs of companies)
-    vector<pair<int, int>> entorno;
+    vector<pair<int, int>> neighborhood;
     for (size_t i = 0; i < n; ++i) {
         for (size_t j = 0; j < n; ++j) {
-            if (i != j) entorno.push_back({i, j});
+            if (i != j) neighborhood.push_back({i, j});
         }
     }
 
@@ -44,30 +44,30 @@ ResultMH<double> LocalSearchMultiStart::optimize(Problem<double> &problem, int m
         // Local search: keep improving until no better neighbor is found
         while (evals < maxevals && improvement_found) {
             improvement_found = false;
-            Random::shuffle(entorno);
+            Random::shuffle(neighborhood);
 
-            for (const auto& par : entorno) {
+            for (const auto& pair : neighborhood) {
                 if (evals >= maxevals) break;
 
-                int i = par.first;
-                int j = par.second;
+                int i = pair.first;
+                int j = pair.second;
 
                 if (current_sol[i] == 0.0) continue;
 
                 // Transfer 40% from i to j
-                double trasvase = current_sol[i] * m_ratio;
-                double nuevo_i = current_sol[i] - trasvase;
-                double nuevo_j = current_sol[j] + trasvase;
+                double transfer = current_sol[i] * m_ratio;
+                double new_i = current_sol[i] - transfer;
+                double new_j = current_sol[j] + transfer;
 
                 // Check if new values are valid (within bounds or near zero)
-                bool valido_i = (nuevo_i < 1e-8) || (nuevo_i >= lo && nuevo_i <= hi);
-                bool valido_j = (nuevo_j < 1e-8) || (nuevo_j >= lo && nuevo_j <= hi);
+                bool valid_i = (new_i < 1e-8) || (new_i >= lo && new_i <= hi);
+                bool valid_j = (new_j < 1e-8) || (new_j >= lo && new_j <= hi);
 
-                if (!valido_i || !valido_j) continue;
+                if (!valid_i || !valid_j) continue;
 
                 tSolution<double> neighbor = current_sol;
-                neighbor[i] = (nuevo_i < 1e-8) ? 0.0 : nuevo_i; 
-                neighbor[j] = (nuevo_j < 1e-8) ? 0.0 : nuevo_j;
+                neighbor[i] = (new_i < 1e-8) ? 0.0 : new_i; 
+                neighbor[j] = (new_j < 1e-8) ? 0.0 : new_j;
 
                 tFitness neighbor_fitness = problem.fitness(neighbor);
                 evals++;
