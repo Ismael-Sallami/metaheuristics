@@ -11,7 +11,7 @@ Se mantienen en la comparativa para analizar la ganancia al pasar a técnicas
 poblacionales:
 
 \begin{itemize}[noitemsep]
-    \item Greedy constructivo.
+    \item Greedy.
     \item Random Search.
     \item BL primer mejor.
 \end{itemize}
@@ -111,10 +111,11 @@ evaluaciones por invocación y actualización Lamarckiana del individuo si mejor
 \KwOut{Mejor individuo encontrado}
 
 Inicializar AGG base y evaluar población\;
+$Best \leftarrow$ mejor de la población inicial\;
 $gen \leftarrow 0$\;
 
-\While{haya presupuesto para seguir evolucionando}{
-    Ejecutar un ciclo generacional AGG (selección-cruce-mutación-reemplazo)\;
+\While{quepa evaluar una generación completa de tamaño $|Pop|$}{
+    Ejecutar un ciclo generacional AGG (selección-cruce-mutación-evaluación) y formar nueva población\;
     $gen \leftarrow gen+1$\;
 
     \If{$gen \bmod 10 = 0$}{
@@ -125,6 +126,9 @@ $gen \leftarrow 0$\;
             \If{contador global alcanza 10.000}{\textbf{break}}\;
         }
     }
+
+    Aplicar elitismo con el mejor padre (generación anterior):
+    si mejora al mejor actual tras BL, sustituir al peor individuo actual\;
 
     Actualizar mejor global\;
 }
@@ -140,18 +144,19 @@ $gen \leftarrow 0$\;
 \KwIn{Solución $s$, ratio $r=0.15$, máximo 100 evaluaciones}
 \KwOut{Solución mejorada}
 
-Generar vecindario de pares $(i,j)$ con $i\neq j$ y barajar\;
+Generar vecindario de pares $(i,j)$ con $i\neq j$ y barajarlo una vez\;
 \While{queden evaluaciones locales y existan pares sin probar}{
     Tomar el siguiente par $(i,j)$\;
     Probar movimiento de transferencia $r$ de $i$ a $j$\;
     Validar límites y evaluar\;
     \If{mejora}{
         Aceptar vecino\;
-        Volver a barajar el vecindario\;
-        Reiniciar contador de vecinos sin mejora\;
+        Reiniciar el contador interno de exploración\;
     }
 }
 \Return solución final\;
 \caption{Búsqueda local suave en AM}
 \label{alg:bl-suave}
 \end{algorithm}
+
+\paragraph{Nota de implementación.} En el código, la BL suave no rehace el \textit{shuffle} en cada mejora: se construye una lista de pares de posiciones, se baraja una sola vez y se recorre con un cursor. Si aparece una mejora, la solución se actualiza y solo se reinicia el contador interno de exploración. Además, la versión encadenada de \texttt{MA-LSCh} conserva el estado de esa búsqueda local entre llamadas.

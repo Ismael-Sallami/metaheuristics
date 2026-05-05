@@ -17,7 +17,7 @@ donde cada componente $s_i$ indica la fracción del capital invertida en el acti
 La población inicial se genera aleatoriamente y, a continuación, se aplica reparación para garantizar que todos los individuos parten de soluciones válidas.
 
 \subsection{Función objetivo}
-La calidad de una cartera se mide con una función de \textit{fitness} que combina beneficio y riesgo. Como en el problema se busca maximizar, una mayor aptitud indica una mejor solución.
+La calidad de una cartera se mide con una función de \textit{fitness} que combina beneficio y riesgo. Como en el problema se busca maximizar, una mayor aptitud indica una mejor solución\footnote{El cambio que se ha introducido es que se ha realizado la raíz para el cálculo del riesgo.}.
 
 \begin{algorithm}[H]
 \SetAlgoLined
@@ -44,54 +44,55 @@ $riesgo \leftarrow 0$
 \textit{Nota: Se incorpora el operador $\max(0, \cdot)$ dentro de la raíz cuadrada para garantizar la estabilidad numérica del algoritmo, evitando valores negativos infinitesimales producidos por errores de precisión en punto flotante (IEEE 754).}
 
 \subsection{Operador de reparación}
-Los operadores genéticos pueden producir soluciones no factibles, por lo que después de cada cruce o mutación se aplica un operador de reparación. Su misión es devolver el vector al espacio de búsqueda permitido sin alterar innecesariamente la estructura de la solución.
+Los operadores genéticos pueden producir soluciones no factibles, por lo que después de cada cruce o mutación se aplica un operador de reparación. Su misión es devolver el vector al espacio de búsqueda permitido sin alterar innecesariamente la estructura de la solución\footnote{Se usa el mismo pseudocódigo de la práctica 1 ya que no ha sufrido cambios.}.
 
+\newpage
 \begin{algorithm}[H]
 \SetAlgoLined
-\KwIn{Vector de pesos $S$}
-\KwOut{Solución reparada y factible}
-
-Calcular la suma total de los pesos\;
-\If{la suma es positiva y $|sum-1| > 10^{-8}$}{
-    Normalizar todos los pesos dividiéndolos por la suma\;
-}
-
-\For{cada gen $s_i$}{
-    \If{$s_i < lo$}{
-        $s_i \leftarrow 0$
-    }
-    \ElseIf{$s_i > hi$}{
-        $s_i \leftarrow hi$
-    }
-}
-
-Recalcular la suma total\;
-Inicializar un contador de seguridad a 0\;
-
-\While{$|sum-1| > 10^{-8}$ \textbf{y} contador$<1000$}{
-    Incrementar contador\;
-    $dif \leftarrow 1-sum$
-
-    \eIf{$dif > 0$}{
-        Seleccionar posiciones con $0 < s_i < hi$\;
-        \If{no hay posiciones candidatas}{
-            Seleccionar una posición aleatoria con $s_i = 0$ y asignarle $lo$\;
-            Recalcular la suma total\;
-            \textbf{continuar}\;
+\KwIn{Vector de pesos inválido $w$, límites $lo$ y $hi$, tolerancia $\epsilon$}
+\KwOut{Vector de pesos $w$ factible}
+ \tcp{Fase 1: Normalización inicial}
+ $suma \leftarrow \sum_{i=1}^{N} w_i$\;
+ \If{$suma > 0$ y $|suma - 1.0| > \epsilon$}{
+    $w_i \leftarrow w_i / suma \quad \forall i$\;
+ }
+ \tcp{Fase 2: Poda estricta de límites}
+ \For{$i \leftarrow 1$ \KwTo $N$}{
+    \If{$w_i < lo$}{ $w_i \leftarrow 0.0$ }
+    \ElseIf{$w_i > hi$}{ $w_i \leftarrow hi$ }
+ }
+ \tcp{Fase 3: Redistribución iterativa}
+ $suma \leftarrow \sum_{i=1}^{N} w_i$\;
+ \While{$|suma - 1.0| > \epsilon$}{
+    $\delta \leftarrow 1.0 - suma$\;
+    \eIf{$\delta > 0$}{
+        \tcp{Falta capital: repartir entre activos sin saturar}
+        $C \leftarrow \{i \mid 0 < w_i < hi\}$\;
+        \eIf{$C \neq \emptyset$}{
+            $incremento \leftarrow \delta / |C|$\;
+            \For{$i \in C$}{
+                $w_i \leftarrow w_i + \min(incremento, hi - w_i)$\;
+            }
+        }{
+            \tcp{Retorno: no hay activos con margen}
+            Seleccionar un índice $k$ aleatorio donde $w_k == 0$\;
+            $w_k \leftarrow lo$\;
         }
-        Distribuir $dif$ entre las posiciones candidatas sin superar $hi$\;
     }{
-        Seleccionar posiciones con $s_i > lo$\;
-        \If{no hay posiciones candidatas}{
-            \textbf{romper}\;
+        \tcp{Sobra capital: recortar de activos activos}
+        $C \leftarrow \{i \mid w_i > lo\}$\;
+        $decremento \leftarrow |\delta| / |C|$\;
+        \For{$i \in C$}{
+            $w_i \leftarrow w_i - \min(decremento, w_i - lo)$\;
         }
-        Restar $|dif|$ entre las posiciones candidatas sin bajar de $lo$\;
     }
-
-    Recalcular la suma total\;
-}
-\caption{Reparación de una solución}
+    $suma \leftarrow \sum_{i=1}^{N} w_i$\;
+ }
+ \Return $w$\;
+ \caption{Operador de Reparación \texttt{fix(w)}}
+ \label{alg:fix}
 \end{algorithm}
+
 
 \subsection{Operadores comunes}
 \subsubsection{Selección de padres: torneo de tamaño 3}

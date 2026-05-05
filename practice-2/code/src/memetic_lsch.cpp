@@ -99,15 +99,8 @@ ResultMH<double> MemeticLSCh::optimize(Problem<double> &problem, int maxevals) {
         }
 
         // Strict Elitism 
-        int best_prev_idx = ea_best_index(population);
-        int best_child_idx = ea_best_index(children);
-        
-        // If the best parent is better than the best child, it replaces the worst child
-        if (ea_better(population[best_prev_idx].fitness, children[best_child_idx].fitness)) {
-            int worst = ea_worst_index(children);
-            children[worst] = population[best_prev_idx];
-            child_state[worst] = ls_state[best_prev_idx];
-        }
+        const EAIndividual best_prev = population[ea_best_index(population)];
+        const SoftLSState best_prev_state = ls_state[ea_best_index(population)];
 
         population = std::move(children);
         ls_state = std::move(child_state);
@@ -131,6 +124,14 @@ ResultMH<double> MemeticLSCh::optimize(Problem<double> &problem, int maxevals) {
                     evals += used;
                 }
             }
+        }
+
+        // Elitism after BL: compare against the refined population, not the raw children.
+        int best_child_idx = ea_best_index(population);
+        if (ea_better(best_prev.fitness, population[best_child_idx].fitness)) {
+            int worst = ea_worst_index(population);
+            population[worst] = best_prev;
+            ls_state[worst] = best_prev_state;
         }
 
         // Update Global Tracking

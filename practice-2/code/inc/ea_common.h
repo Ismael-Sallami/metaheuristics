@@ -207,7 +207,8 @@ inline void ea_blx_crossover(
  *
  * With probability pm_indiv, the operator moves a fraction of one gene value
  * (transfer_ratio) from a random source position i to a different position j.
- * The result is repaired with problem.fix().
+ * The mutation is only applied if both modified genes remain in the valid
+ * domain (0 or [lo, hi]) to avoid calling repair inside mutation.
  *
  * @param sol Solution to mutate.
  * @param problem Optimization problem (used for repair).
@@ -235,11 +236,23 @@ inline void ea_mutate_transfer(
         j = Random::get<int>(0, n - 1);
     }
 
-    const double amount = sol[i] * transfer_ratio;
-    sol[i] -= amount;
-    sol[j] += amount;
+    const auto bounds = problem.getSolutionDomainRange();
+    const double lo = bounds.first;
+    const double hi = bounds.second;
+    constexpr double eps = 1e-8;
 
-    problem.fix(sol);
+    const auto in_domain = [&](double w) {
+        return std::abs(w) <= eps || (w >= lo - eps && w <= hi + eps);
+    };
+
+    const double amount = sol[i] * transfer_ratio;
+    const double candidate_i = sol[i] - amount;
+    const double candidate_j = sol[j] + amount;
+
+    if (in_domain(candidate_i) && in_domain(candidate_j)) {
+        sol[i] = candidate_i;
+        sol[j] = candidate_j;
+    }
 }
 
 

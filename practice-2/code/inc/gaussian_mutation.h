@@ -7,7 +7,7 @@
  * @brief Gaussian mutation operator for real-valued individuals.
  *
  * The function in this header applies a single-point Gaussian perturbation
- * to one component of a solution, then repairs the solution with problem.fix().
+ * with explicit domain checks (0 or [lo, hi]) and no repair call in mutation.
  */
 
 /**
@@ -18,10 +18,10 @@
  * `pm_indiv` is converted internally to an effective gene probability:
  * `pm_gene = pm_indiv / solution_size`.
  * Each selected gene receives Gaussian noise with standard deviation `sigma`.
- * After mutation, the solution is repaired to satisfy problem constraints.
+ * If the resulting individual cannot remain valid, the mutation is reverted.
  *
  * @param solution Solution vector to mutate.
- * @param problem Problem instance used to repair constraints.
+ * @param problem Problem instance used to query bounds and validate.
  * @param pm_indiv Target mutation budget per individual.
  * @param sigma Standard deviation of Gaussian noise.
  */

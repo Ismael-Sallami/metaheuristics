@@ -195,13 +195,21 @@ void print_header()
     cout << ui::colorize(ui::BOLD + string("Results Table"), ui::BLUE) << "\n";
     cout << ui::separator(width_total) << "\n";
     cout << ui::colorize((ostringstream() << left << setw(16) << "Algorithm"
-                        << right << setw(14) << "Train"
-                        << setw(14) << "Test"
-                        << setw(14) << "Profit"
+                        << right << setw(14) << "2015-2024"
+                        << setw(14) << "2025"
+                        << setw(14) << "2025"
                         << setw(14) << "Std"
                         << setw(14) << "Evals"
                         << setw(14) << "Time(s)"
-                        << setw(21) << "").str(), ui::BOLD + ui::MAGENTA) << "\n";
+                        << setw(1) << "").str(), ui::BOLD + ui::MAGENTA) << "\n";
+    cout << ui::colorize((ostringstream() << left << setw(16) << ""
+                        << right << setw(14) << "Fitness"
+                        << setw(14) << "Fitness"
+                        << setw(14) << "Profit"
+                        << setw(14) << ""
+                        << setw(14) << ""
+                        << setw(14) << ""
+                        << setw(1) << "").str(), ui::BOLD + ui::MAGENTA) << "\n";
     cout << ui::separator(width_total) << "\n";
 }
 
