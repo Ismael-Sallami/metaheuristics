@@ -1,0 +1,235 @@
+\newpage
+\section{Experimentos y Análisis de Resultados}
+\label{sec:experimentos}
+
+\subsection{Casos, Parámetros y Metodología}
+
+Configuración experimental utilizada:
+
+\begin{itemize}[noitemsep]
+    \item 3 mercados: IBEX 35, S\&P 100 y S\&P 500.
+    \item 50 ejecuciones independientes por algoritmo estocástico.
+    \item Presupuesto de 10.000 evaluaciones por ejecución.
+    \item Semilla base 42, incrementándose secuencialmente ($42+i$).
+    \item Entrenamiento en 2015--2024 y validación en 2025.
+\end{itemize}
+
+Todos estos parámetros se leen desde \texttt{config.cfg}, por lo que no es
+necesario recompilar para modificarlos.
+
+\subsection{Salida Resumida de los Algoritmos Obligatorios}
+
+Las tablas siguientes recogen la salida media de las ejecuciones para los
+algoritmos obligatorios de la práctica. Se muestran solo estos métodos para que
+la comparación quede centrada en la parte común del enunciado.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+\textbf{IBEX 35} & \textbf{2015-2024 Fitness} & \textbf{2025 Fitness} & \textbf{Profit} & \textbf{Desv} & \textbf{Evals} & \textbf{Tiempo(s)} \\
+\midrule
+Greedy    & -4.794 & -3.227 & -0.033 & 0.000 & 1     & 0.000 \\
+Random    & -4.911 & -3.305 &  0.052 & 0.091 & 10000 & 0.024 \\
+BL        & -4.614 & -3.116 &  0.021 & 0.039 & 1078  & 0.001 \\
+AGG-Arit  & -4.663 & -3.142 &  0.042 & 0.052 & 10000 & 0.009 \\
+AGG-BLX   & -4.496 & -3.091 &  0.036 & 0.006 & 10000 & 0.010 \\
+AGE-Arit  & -4.587 & -3.119 &  0.043 & 0.039 & 10000 & 0.010 \\
+AGE-BLX   & -4.499 & -3.097 &  0.033 & 0.010 & 10000 & 0.011 \\
+AM-All    & -4.591 & -3.118 &  0.036 & 0.035 & 10000 & 0.008 \\
+AM-Rand   & -4.490 & -3.084 &  0.033 & 0.000 & 10000 & 0.009 \\
+AM-Best   & -4.490 & -3.083 &  0.033 & 0.000 & 10000 & 0.009 \\
+\bottomrule
+\end{tabular}
+\caption{Resultados medios en IBEX 35 para los algoritmos obligatorios.}
+\label{tab:ibex-oblig}
+\end{table}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+\textbf{S\&P 100} & \textbf{2015-2024 Fitness} & \textbf{2025 Fitness} & \textbf{Profit} & \textbf{Desv} & \textbf{Evals} & \textbf{Tiempo(s)} \\
+\midrule
+Greedy    & -3.305 & -3.791 & 0.100 & 0.000 & 1     & 0.000 \\
+Random    & -3.400 & -4.080 & 0.079 & 0.041 & 10000 & 0.098 \\
+BL        & -3.116 & -3.890 & 0.097 & 0.084 & 4351  & 0.033 \\
+AGG-Arit  & -3.120 & -3.845 & 0.083 & 0.041 & 10000 & 0.071 \\
+AGG-BLX   & -2.879 & -3.721 & 0.096 & 0.023 & 10000 & 0.075 \\
+AGE-Arit  & -3.157 & -3.872 & 0.082 & 0.054 & 10000 & 0.071 \\
+AGE-BLX   & -2.937 & -3.744 & 0.094 & 0.037 & 10000 & 0.075 \\
+AM-All    & -3.110 & -3.830 & 0.085 & 0.037 & 10000 & 0.073 \\
+AM-Rand   & -2.822 & -3.735 & 0.099 & 0.011 & 10000 & 0.074 \\
+AM-Best   & -2.814 & -3.740 & 0.102 & 0.008 & 10000 & 0.074 \\
+\bottomrule
+\end{tabular}
+\caption{Resultados medios en S\&P 100 para los algoritmos obligatorios.}
+\label{tab:sp100-oblig}
+\end{table}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+\textbf{S\&P 500} & \textbf{2015-2024 Fitness} & \textbf{2025 Fitness} & \textbf{Profit} & \textbf{Desv} & \textbf{Evals} & \textbf{Tiempo(s)} \\
+\midrule
+Greedy    & -3.370 & -3.909 & 0.024 & 0.000 & 1     & 0.000 \\
+Random    & -3.648 & -4.364 & 0.019 & 0.044 & 10000 & 1.851 \\
+BL        & -3.428 & -4.330 & 0.004 & 0.154 & 9645  & 1.526 \\
+AGG-Arit  & -2.961 & -3.958 & 0.018 & 0.082 & 10000 & 1.504 \\
+AGG-BLX   & -2.791 & -3.893 & 0.023 & 0.046 & 10000 & 1.490 \\
+AGE-Arit  & -3.176 & -4.073 & 0.018 & 0.074 & 10000 & 1.478 \\
+AGE-BLX   & -3.012 & -3.984 & 0.023 & 0.066 & 10000 & 1.483 \\
+AM-All    & -3.204 & -4.102 & 0.015 & 0.040 & 10000 & 1.573 \\
+AM-Rand   & -2.738 & -3.907 & 0.017 & 0.034 & 10000 & 1.537 \\
+AM-Best   & -2.731 & -3.905 & 0.017 & 0.035 & 10000 & 1.538 \\
+\bottomrule
+\end{tabular}
+\caption{Resultados medios en S\&P 500 para los algoritmos obligatorios.}
+\label{tab:sp500-oblig}
+\end{table}
+
+\subsection{Resultados Obtenidos (Algoritmos Obligatorios)}
+
+La salida completa de ejecución muestra que, en términos de \textit{train}, los
+métodos evolutivos y meméticos mejoran de forma clara al Greedy, pero la mejora
+se reduce cuando se mide en \textit{test}. Esa diferencia entre entrenamiento y
+validación es precisamente la que aparece reflejada en los boxplots: algunas
+estrategias alcanzan soluciones muy buenas en promedio, pero con mayor
+dispersión y presencia de valores atípicos.
+
+Si se toma Greedy como referencia\footnote{$\text{Mejora(\%)} = \frac{|\text{Algoritmo} - \text{Greedy}|}{|\text{Greedy}|} \times 100$, donde los valores provienen de la tabla de resultados.}, la mejora media en \textit{train} de las
+mejores configuraciones ronda aproximadamente un \(6\%\) en IBEX 35, un
+\(15\%\) en S\&P 100 y un \(19\%\) en S\&P 500. En \textit{test}, en cambio,
+la ganancia se comprime: alrededor de un \(4\%-5\%\) en IBEX 35, cerca de un
+\(2\%\) en S\&P 100 y apenas un \(1\%\) en S\&P 500. Esto indica que el
+problema se vuelve más exigente al crecer el mercado y que el sobreajuste entre
+entrenamiento y validación gana peso en los casos grandes.
+
+\subsection{Análisis de las Distribuciones}
+
+Las Figuras~\ref{fig:ibex-box}, \ref{fig:sp100-box} y \ref{fig:sp500-box}
+permiten observar la estabilidad de cada algoritmo. Cada mercado se muestra en
+dos partes para mantener la legibilidad. Greedy aparece como una raya
+horizontal porque no tiene variabilidad: sirve como referencia rápida, pero
+queda lejos de los métodos poblacionales en \textit{train}. Random es el más
+irregular en todos los mercados, lo que podría confirmanos que la aleatoriedad es impredecible.
+
+En los algoritmos genéticos, el cruce BLX domina de forma bastante clara al
+aritmético. La mejora visual no es solo de posición de la mediana: también se
+observa una reducción de dispersión y menos ejecuciones extremas. En términos
+prácticos, BLX suele aportar una ganancia adicional de entre un \(1\%\) y un
+\(3\%\) en \textit{test} frente al cruce aritmético, con una estabilidad mayor.
+Esto se aprecia especialmente en IBEX 35 y S\&P 100, donde las cajas de BLX son
+más compactas y los whiskers quedan mejor controlados.
+
+La comparación entre AGG y AGE muestra que no existe una superioridad universal
+del esquema estacionario sobre el generacional. En IBEX 35, ambos se mueven en
+rangos parecidos, aunque AGE no aporta una mejora clara sobre AGG. En S\&P 100,
+AGG-BLX y AGE-BLX quedan muy cerca, pero AGG suele mantener una mediana algo
+mejor y menos ruido. En S\&P 500, la tendencia se mantiene: el modelo generacional
+con BLX ofrece una combinación más equilibrada entre calidad media y robustez.
+
+Los boxplots también muestran el papel de los valores atípicos en las distintas ejecuciones. En casi todos los gráficos aparecen uno o dos outliers aislados, lo que indica que incluso cuando la dispersión central es reducida todavía existen ejecuciones puntuales alejadas del comportamiento habitual. 
+
+Entre los algoritmos obligatorios, AM-All presenta una dispersión superior a AM-Rand y AM-Best. Esa diferencia confirma que aplicar la búsqueda local a toda la población incrementa el coste de explotación sin traducirse en una mejora proporcional.
+
+Entre las variantes meméticas, AM-Rand y AM-Best quedan prácticamente empatadas,
+con cajas estrechas y mediana alta. En varios mercados apenas se distinguen en
+los gráficos, lo que indica que la selección aleatoria de una fracción de la
+población o la selección del bloque más prometedor terminan convergiendo a una
+calidad muy similar. En cambio, AM-All suele quedar por detrás y es más sensible
+a ejecuciones malas, por lo que no compensa su mayor intensidad de búsqueda
+local.
+
+\subsection{Resumen Comparativo}
+
+Si se resume el comportamiento global de los gráficos, pueden extraerse cuatro
+ideas principales. Primero, el rendimiento relativo empeora al pasar de IBEX 35
+a S\&P 100 y, sobre todo, a S\&P 500: el problema grande es más difícil y las
+ventajas sobre Greedy se concentran en \textit{train}, no tanto en \textit{test}.
+Segundo, BLX es la opción más robusta frente al cruce aritmético, tanto en la
+calidad central como en la dispersión. Tercero, la búsqueda local sobre toda la
+población no resulta la mejor estrategia; es preferible limitarla a una parte de
+los individuos o concentrarla en los mejores candidatos. Cuarto, los algoritmos
+con mejores medianas no siempre son los que presentan menos outliers, por lo que
+la estabilidad debe considerarse junto con el valor medio.
+
+En cuanto al coste temporal, la diferencia entre algoritmos es pequeña frente al
+presupuesto total de evaluaciones. Los métodos más simples apenas tardan unas
+pocas centésimas de segundo en IBEX y S\&P 100, mientras que en S\&P 500 el
+tiempo aumenta, pero sigue estando dominado por el coste de evaluación y no por
+la lógica concreta del operador evolutivo. Por tanto, la selección del algoritmo
+debe hacerse más por calidad y estabilidad que por tiempo de ejecución.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.9\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figuras/fig_ibex_oblig_pt1.png}
+
+        \smallskip
+        {\small Parte 1}
+    \end{minipage}
+    
+    \vspace{0.5cm}
+    
+    \begin{minipage}[t]{0.9\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figuras/fig_ibex_oblig_pt2.png}
+
+        \smallskip
+        {\small Parte 2}
+    \end{minipage}
+    \caption{Distribución del \textit{fitness} por algoritmo en IBEX 35.}
+    \label{fig:ibex-box}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.9\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figuras/fig_sp100_oblig_pt1.png}
+
+        \smallskip
+        {\small Parte 1}
+    \end{minipage}
+    
+    \vspace{0.5cm}
+    
+    \begin{minipage}[t]{0.9\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figuras/fig_sp100_oblig_pt2.png}
+
+        \smallskip
+        {\small Parte 2}
+    \end{minipage}
+    \caption{Distribución del \textit{fitness} por algoritmo en S\&P 100.}
+    \label{fig:sp100-box}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.9\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figuras/fig_sp500_oblig_pt1.png}
+
+        \smallskip
+        {\small Parte 1}
+    \end{minipage}
+    
+    \vspace{0.5cm}
+    
+    \begin{minipage}[t]{0.9\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figuras/fig_sp500_oblig_pt2.png}
+
+        \smallskip
+        {\small Parte 2}
+    \end{minipage}
+    \caption{Distribución del \textit{fitness} por algoritmo en S\&P 500.}
+    \label{fig:sp500-box}
+\end{figure}

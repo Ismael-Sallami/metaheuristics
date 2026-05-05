@@ -109,14 +109,7 @@ ResultMH<double> MemeticAlgorithm::optimize(Problem<double> &problem, int maxeva
             ea_evaluate_individual(problem, children[i], evals);
         }
 
-        int best_prev_idx = ea_best_index(population);
-        int best_child_idx = ea_best_index(children);
-
-        // Keep the best parent if the new children are not better.
-        if (ea_better(population[best_prev_idx].fitness, children[best_child_idx].fitness)) {
-            int worst_child_idx = ea_worst_index(children);
-            children[worst_child_idx] = population[best_prev_idx];
-        }
+        const EAIndividual best_prev = population[ea_best_index(population)];
 
         population = std::move(children);
         ++generation;
@@ -162,6 +155,13 @@ ResultMH<double> MemeticAlgorithm::optimize(Problem<double> &problem, int maxeva
 
                 evals += used;
             }
+        }
+
+        // Elitism is applied after BL so the comparison uses the refined children.
+        int best_child_idx = ea_best_index(population);
+        if (ea_better(best_prev.fitness, population[best_child_idx].fitness)) {
+            int worst_child_idx = ea_worst_index(population);
+            population[worst_child_idx] = best_prev;
         }
 
         int best_now_idx = ea_best_index(population);

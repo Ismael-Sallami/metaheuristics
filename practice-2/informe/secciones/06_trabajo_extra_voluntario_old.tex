@@ -1,0 +1,228 @@
+% \newpage
+% \section{Trabajo Extra Voluntario}
+% \label{sec:trabajo_extra}
+
+% Esta sección recoge las ampliaciones voluntarias sobre la base de la práctica 1 y
+% su adaptación al problema del portfolio de esta segunda práctica. El punto de
+% partida heredado es el bloque formado por Greedy, Random y la Búsqueda Local
+% primer mejor, que ya permite contrastar exploración pura, construcción heurística
+% y explotación local. Sobre esa base se han incorporado variantes que refinan la
+% búsqueda local, cambian el operador de mutación y prueban una familia distinta de
+% algoritmos evolutivos.
+
+% \subsection{Técnicas voluntarias implementadas}
+
+% \subsubsection{Variantes de Búsqueda Local}
+
+% Además de la BL primer mejor obligatoria (\texttt{LOCALSEARCH}), se han añadido
+% las dos variantes voluntarias siguientes:
+
+% \begin{itemize}[noitemsep]
+%     \item \textbf{BL Best} (\texttt{LOCALSEARCHBEST}): explora el vecindario completo
+%           y selecciona el mejor vecino disponible en cada iteración.
+%     \item \textbf{BL Multi} (\texttt{LOCALSEARCHMULTI}): ejecuta varias búsquedas
+%           locales consecutivas desde distintas soluciones iniciales hasta agotar el
+%           presupuesto de evaluaciones.
+% \end{itemize}
+
+% Estas dos variantes permiten aislar el efecto de la intensificación: una busca el
+% mejor vecino posible en cada paso y la otra intenta amortiguar los óptimos locales
+% reiniciando la búsqueda desde diferentes puntos. Estas son las mejoras que se implementaron en la práctica 1.
+
+% \subsubsection{Mutación Gaussiana en AGG}
+
+% Se implementa una variante \textbf{AGG-Gauss} (\texttt{gaussian\_mutation.cpp}) que
+% sustituye la mutación por transferencia por una perturbación continua basada en
+% ruido normal, generada mediante Box-Muller y seguida de reparación de factibilidad.
+% Con ello se compara una mutación estadística suave con la transferencia fija usada
+% por los algoritmos genéticos obligatorios.
+
+% \subsubsection{Encadenamiento de Búsqueda Local en AM-LSCh}
+
+% Se añadió \textbf{AM-LSCh} (\texttt{memetic\_lsch.cpp}), que preserva el estado de la
+% búsqueda local por individuo. La idea es no reiniciar siempre el refinamiento desde
+% cero, sino acumular información sobre qué soluciones ya han sido tratadas y seguir
+% encadenando mejoras sobre candidatos prometedores. Esta variante mantiene el mismo
+% marco memético, pero cambia la gestión interna de la explotación local.
+
+% \subsubsection{Evolución Diferencial}
+
+% También se incorporó un algoritmo \textbf{DE} clásico (DE/rand/1/bin) con mutación
+% diferencial, cruce binomial y selección uno a uno:
+
+% \begin{itemize}[noitemsep]
+%     \item Mutación diferencial: $v_i = x_{r_0} + F \cdot (x_{r_1} - x_{r_2})$.
+%     \item Cruce binomial con tasa $CR \in [0,1]$.
+%     \item Reemplazo determinista del vector objetivo si el trial mejora su fitness.
+% \end{itemize}
+
+% Esta familia es relevante porque introduce una dinámica evolutiva distinta a la de
+% AGG y AM, y permite comprobar si su forma de explorar el espacio resulta competitiva
+% para representaciones reales del portfolio.
+
+% \subsection{Análisis comparativo de los extras}
+
+% Las Figuras~\ref{fig:ibex-todos}--\ref{fig:sp500-todos} muestran los boxplots con
+% los quince algoritmos completos, es decir, los diez obligatorios más los cinco
+% voluntarios, divididos en dos partes por legibilidad. En casi todos los gráficos
+% aparecen uno o dos outliers aislados, lo que indica que incluso cuando la caja
+% central es compacta siguen existiendo ejecuciones puntuales alejadas del resto.
+
+% \subsubsection{BL Best y BL Multi frente a la BL base}
+
+% BL Best no mejora a la BL primer mejor; al contrario, se queda por detrás en los
+% tramos más importantes. En IBEX 35 empeora alrededor de un 2\% tanto en fitness
+% histórico como en validación. En S\&P 100 y S\&P 500 el retroceso es bastante más
+% fuerte, del orden de un 20\%--25\% en \textit{2015-2024 Fitness} y de un 15\%--16\%
+% en \textit{2025 Fitness}. El patrón es claro: evaluar todo el vecindario no compensa
+% si el problema ya está bien resuelto con una estrategia de primer mejora y una
+% reparación sólida.
+
+% BL Multi sí ofrece una mejora más razonable. En IBEX 35 la diferencia es pequeña,
+% en torno al 1\%, pero en S\&P 100 y S\&P 500 mejora a la BL base entre un 1\% y un
+% 3\%, sobre todo en el fitness histórico. Esto sugiere que reiniciar la búsqueda local
+% desde distintos puntos ayuda a explorar mejor el espacio, aunque el beneficio no es
+% lo bastante grande como para convertirla en una dominadora clara de la versión base.
+
+% \subsubsection{AGG-Gauss frente a los AG obligatorios}
+
+% AGG-Gauss mejora de forma consistente al cruce aritmético. Frente a AGG-Arit, la
+% ganancia ronda entre un 3\% y un 6\% según el mercado y la fase medida. En IBEX 35
+% está aproximadamente un 3\% por encima en fitness histórico y algo más de un 1\%
+% mejor en validación. En S\&P 100 la ventaja sobre el cruce aritmético es aún más
+% clara, mientras que en S\&P 500 mantiene esa mejora aunque con una dispersión algo
+% mayor.
+
+% Sin embargo, AGG-Gauss no alcanza a AGG-BLX. El cruce BLX sigue siendo la opción más
+% robusta entre las dos que se comparan en el informe principal, y AGG-Gauss queda muy
+% cerca pero por debajo. En términos prácticos, la mutación gaussiana aporta una
+% perturbación suave interesante, pero no consigue superar la ventaja estructural del
+% muestreo expandido de BLX para esta representación real.
+
+% \subsubsection{AM-LSCh frente a los meméticos obligatorios}
+
+% AM-LSCh se mueve prácticamente en la misma banda que AM-Best y AM-Rand. En IBEX 35
+% las diferencias son mínimas, y en S\&P 100 y S\&P 500 su comportamiento oscila entre
+% pequeñas mejoras y pequeñas pérdidas de menos de un 1\%. En otras palabras, el
+% encadenamiento de estados no degrada la calidad, pero tampoco produce una ruptura
+% clara respecto a las variantes meméticas ya incluidas en la parte obligatoria.
+
+% Desde el punto de vista del análisis, esto es útil porque confirma que la manera de
+% organizar la búsqueda local puede cambiar sin penalizar de forma apreciable la
+% calidad final. Además, el coste temporal permanece en el mismo orden de magnitud que
+% el de AM-Best, así que la elección entre ambas variantes puede hacerse por criterio de
+% implementación más que por rendimiento puro.
+
+% \subsubsection{Evolución Diferencial frente a AGG y AM}
+
+% DE es la variante voluntaria que mejor encaja con mercados grandes. En S\&P 100 y
+% S\&P 500 mejora a AGG-BLX en \textit{2015-2024 Fitness} en torno a un 2\%--3\%, y
+% además en S\&P 500 consigue también una ligera ventaja en \textit{2025 Fitness}. En
+% S\&P 100 el comportamiento es algo más mixto: mejora en entrenamiento pero queda muy
+% cerca o ligeramente por detrás en validación.
+
+% Frente a AM-Best, DE está prácticamente empatado en IBEX 35 y S\&P 100, y en S\&P 500
+% resulta ligeramente mejor tanto en entrenamiento como en validación. Esto refuerza la
+% idea de que la evolución diferencial escala bien cuando aumenta la dimensión del
+% problema y que, en los casos grandes, puede competir de tú a tú con los mejores
+% meméticos de la práctica.
+
+% \subsection{Distribuciones completas}
+
+% Las figuras con todos los algoritmos permiten ver el panorama completo. La parte
+% superior de las distribuciones sigue ocupada por las mejores combinaciones del
+% informe principal, a las que se suman DE y AM-LSCh en una posición muy competitiva.
+% Los peores comportamientos siguen concentrándose en Random y BL Best, lo que encaja
+% con lo visto en el análisis cuantitativo.
+
+% También se aprecia que la estabilidad no depende solo del valor medio del fitness.
+% Hay algoritmos con medianas atractivas pero con uno o dos outliers marcados, y otros
+% que mantienen una caja algo más ancha pero una evolución más homogénea. Por eso en
+% esta sección se valora conjuntamente la posición central, la dispersión y la presencia
+% de valores atípicos.
+
+% \begin{figure}[H]
+%     \centering
+%     \begin{minipage}[t]{0.9\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{figuras/fig_ibex_todos_pt1.png}
+
+%         \smallskip
+%         {\small Baselines + AG}
+%     \end{minipage}
+
+%     \vspace{0.5cm}
+
+%     \begin{minipage}[t]{0.9\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{figuras/fig_ibex_todos_pt2.png}
+
+%         \smallskip
+%         {\small Meméticos + Extras}
+%     \end{minipage}
+%     \caption{Distribución del \textit{fitness} con todos los algoritmos en IBEX 35.}
+%     \label{fig:ibex-todos}
+% \end{figure}
+
+% \begin{figure}[H]
+%     \centering
+%     \begin{minipage}[t]{0.9\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{figuras/fig_sp100_todos_pt1.png}
+
+%         \smallskip
+%         {\small Baselines + AG}
+%     \end{minipage}
+
+%     \vspace{0.5cm}
+
+%     \begin{minipage}[t]{0.9\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{figuras/fig_sp100_todos_pt2.png}
+
+%         \smallskip
+%         {\small Meméticos + Extras}
+%     \end{minipage}
+%     \caption{Distribución del \textit{fitness} con todos los algoritmos en S\&P 100.}
+%     \label{fig:sp100-todos}
+% \end{figure}
+
+% \begin{figure}[H]
+%     \centering
+%     \begin{minipage}[t]{0.9\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{figuras/fig_sp500_todos_pt1.png}
+
+%         \smallskip
+%         {\small Baselines + AG}
+%     \end{minipage}
+
+%     \vspace{0.5cm}
+
+%     \begin{minipage}[t]{0.9\textwidth}
+%         \centering
+%         \includegraphics[width=\textwidth]{figuras/fig_sp500_todos_pt2.png}
+
+%         \smallskip
+%         {\small Meméticos + Extras}
+%     \end{minipage}
+%     \caption{Distribución del \textit{fitness} con todos los algoritmos en S\&P 500.}
+%     \label{fig:sp500-todos}
+% \end{figure}
+
+% \subsection{Conclusiones sobre las mejoras voluntarias}
+
+% La lectura conjunta de los resultados es bastante coherente con la teoría y con la
+% guía de la práctica. La BL base heredada de la práctica 1 sigue siendo una referencia
+% muy sólida; BL Best no compensa su mayor intensidad de búsqueda; BL Multi mejora un
+% poco la exploración; AGG-Gauss ofrece una mejora clara sobre el cruce aritmético pero
+% no supera BLX; AM-LSCh mantiene la calidad de los meméticos sin penalización relevante;
+% y DE es la variante que mejor escala cuando el mercado crece, especialmente en
+% S\&P 500.
+
+% En resumen, los algoritmos voluntarios no cambian la jerarquía general establecida por
+% los obligatorios, pero sí matizan el análisis. Los mejores extras se sitúan muy cerca
+% de los mejores obligatorios, mientras que las variantes más agresivas o más exploratorias
+% suelen pagar ese cambio con más dispersión o peor validación. Eso encaja con el objetivo
+% de esta sección: mostrar que pequeñas modificaciones del operador o de la estrategia de
+% explotación pueden mover el rendimiento, pero no siempre en la dirección esperada.
