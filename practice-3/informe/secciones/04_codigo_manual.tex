@@ -1,0 +1,80 @@
+\newpage
+\section{Estructura del Código y Manual de Usuario}
+\label{sec:manual}
+
+\subsection{Estructura del Proyecto}
+
+El código de la práctica se organiza en el directorio \texttt{code/} con estructura
+modular:
+
+\begin{itemize}[noitemsep]
+    \item \texttt{common/}: interfaces base del framework (\texttt{MH}, \texttt{Problem}, \texttt{Solution}, utilidades).
+    \item \texttt{inc/}: cabeceras de algoritmos y utilidades del problema.
+    \item \texttt{src/}: implementaciones C++.
+    \item \texttt{datos\_portfolio\_2526/}: ficheros CSV de IBEX 35, S\&P 100 y S\&P 500.
+    \item \texttt{config.cfg}: parametrización de experimentos sin recompilar.
+    \item \texttt{main.cpp}: orquestación global, ejecución y generación de tablas/CSV.
+    \item \texttt{genera\_boxplots.py}: script para figuras de distribución\footnote{Cabe destacar que se ha mejorado/ajustado para este caso.}.
+\end{itemize}
+
+\subsection{Módulos Principales Implementados}
+
+\begin{itemize}[noitemsep]
+    \item Baselines: \texttt{greedy.cpp}, \texttt{randomsearch.h}, \texttt{localsearch.cpp}.
+    \item Enfriamiento Simulado: \texttt{simulated\_annealing.h/.cpp}.
+    \item Búsqueda Multiarranque: \texttt{bmb.h/.cpp}.
+    \item Búsqueda Local Reiterada: \texttt{ils.h/.cpp}.
+    \item Hibridación ILS-ES: \texttt{ils\_es.h/.cpp}.
+\end{itemize}
+
+\subsection{Manual de Usuario: Compilación y Ejecución}
+
+El proceso de compilación se ha automatizado completamente mediante \texttt{CMake} y \texttt{Make}. Para compilar el código, el usuario debe situarse en el directorio \texttt{code/} y ejecutar:
+
+\begin{lstlisting}[language=bash, frame=single]
+cmake .
+make
+\end{lstlisting}
+
+Este proceso genera un ejecutable llamado \texttt{main}.
+
+\textbf{Ejecución estándar:} Al iniciarse, el programa lee automáticamente el archivo \texttt{config.cfg}, por lo que no es necesario recompilar para cambiar hiperparámetros.
+
+\begin{lstlisting}[language=bash, frame=single]
+./main
+\end{lstlisting}
+
+\textbf{Sobrescritura de semilla por línea de comandos:} La semilla también puede pasarse como argumento, sobrescribiendo la del fichero de configuración:
+
+\begin{lstlisting}[language=bash, frame=single]
+./main 42
+\end{lstlisting}
+
+\subsection{Configuración de Experimentos sin Recompilación}
+
+El fichero \texttt{config.cfg} permite ajustar todos los parámetros de los algoritmos sin necesidad de recompilar. Entre los nuevos parámetros configurables para la Práctica 3 están:
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Enfriamiento Simulado:} \texttt{ES\_MU} y \texttt{ES\_PHI} para la temperatura inicial, \texttt{ES\_TF} para la temperatura final, \texttt{ES\_MAX\_VECINOS} y \texttt{ES\_MAX\_EXITOS} para el bucle interno $L(T)$.
+    \item \textbf{Algoritmos de Trayectoria Múltiple:} \texttt{TRAJ\_NUM\_STARTS} (número de arranques), \texttt{TRAJ\_MAX\_EVALS\_BL} (presupuesto por cada BL), \texttt{TRAJ\_MUTATION\_RATE} (porcentaje de activos a mutar en ILS).
+    \item \textbf{Flags de algoritmos:} para activar/desactivar bloques obligatorios (AG, AM, DE) y los nuevos de la Práctica 3 (\texttt{EXP\_RUN\_P3}).
+\end{itemize}
+
+\subsection{Salida de Resultados y Visualización}
+
+Al finalizar su ejecución, el binario genera un resumen en pantalla que incluye:
+
+\begin{itemize}[noitemsep]
+    \item Tabla resumen por mercado con fitness, evaluaciones y tiempos de ejecución de cada algoritmo.
+    \item Mejor solución (\textit{fitness}) encontrada durante la ejecución.
+\end{itemize}
+
+El programa voltea automáticamente los datos en archivos \texttt{.csv} organizados por mercado, permitiendo el análisis posterior.
+
+Para obtener gráficas de distribución (boxplots) de los resultados, basta con ejecutar:
+
+\begin{lstlisting}[language=bash, frame=single]
+python3 genera_boxplots.py
+\end{lstlisting}
+
+Esto genera visualizaciones en formato \texttt{.png} que facilitan el análisis comparativo entre algoritmos.

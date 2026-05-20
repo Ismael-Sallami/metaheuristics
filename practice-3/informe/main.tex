@@ -1,0 +1,80 @@
+\documentclass[12pt, a4paper]{article}
+
+% --- Paquetes esenciales ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish, es-tabla]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage[ruled,vlined,spanish]{algorithm2e}
+\usepackage{listings}
+
+% --- Configuración de página y márgenes ---
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm, headheight=25pt}
+
+% --- Colores corporativos (Azul UGR/Formal) ---
+\definecolor{colorPrincipal}{RGB}{0, 74, 128}
+\definecolor{colorGris}{RGB}{100, 100, 100}
+
+\usepackage[colorlinks=true, linkcolor=colorPrincipal, citecolor=colorPrincipal, urlcolor=colorPrincipal]{hyperref}
+
+% --- Configuración de Cabeceras y Pies ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{colorGris}{\small Metaheurística - Práctica 3}}
+\fancyhead[R]{\textcolor{colorGris}{\small Problema del Portfolio}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{colorPrincipal}\leaders\hrule height \headrulewidth\hfill}}
+
+% --- Variables del alumno ---
+\newcommand{\tituloPractica}{Práctica 3: Técnicas de Búsqueda basadas en Trayectorias para el Problema de Portfolio}
+\newcommand{\cursoAcademico}{Curso 2025-26}
+\newcommand{\nombreAlumno}{Ismael Sallami Moreno}
+\newcommand{\dniAlumno}{20888108Z}
+\newcommand{\emailAlumno}{ism350zsallami@correo.ugr.es}
+\newcommand{\horarioPracticas}{Jueves 15:30 - 17:30}
+
+\begin{document}
+
+% a) Portada
+\hypersetup{pageanchor=false}
+\input{secciones/00_portada}
+\hypersetup{pageanchor=true}
+\newpage
+
+% b) Índice
+\tableofcontents
+\newpage
+
+% c) d) e) f) g)
+\input{secciones/01_formulacion}
+\input{secciones/02_aplicacion_comun}
+\input{secciones/03_algoritmos_especificos}
+\input{secciones/04_codigo_manual}
+\input{secciones/05_experimentos}
+\input{secciones/06_trabajo_extra_voluntario}
+
+% h) Referencias bibliográficas
+\newpage
+\addcontentsline{toc}{section}{Referencias Bibliográficas}
+
+\section*{Referencias Bibliográficas}
+\begin{itemize}
+    \item Guion de la Práctica 3.
+    \item Transparencias del Seminario 4 (Trayectorias simples y múltiples: ES, BMB, ILS).
+    \item Diapositivas de Teoría.
+    \item Kirkpatrick, S., Gelatt, C.D. y Vecchi, M.P. (1983). \textit{Optimization by Simulated Annealing}. Science.
+\end{itemize}
+
+
+
+\end{document}
