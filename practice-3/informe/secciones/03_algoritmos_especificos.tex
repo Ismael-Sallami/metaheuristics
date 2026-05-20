@@ -1,0 +1,142 @@
+\newpage
+\section{Estructura de los Métodos de Búsqueda Basados en Trayectorias}
+\label{sec:algoritmos}
+
+En este apartado se detalla el pseudocódigo y los componentes específicos de cada 
+algoritmo implementado para la práctica 3, centrada en técnicas de trayectoria 
+simple y múltiple.
+
+\subsection{Enfriamiento Simulado (ES)}
+
+Este algoritmo de trayectoria simple permite escapar de óptimos locales aceptando 
+movimientos que empeoran la solución con una probabilidad decreciente.
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Temperatura Inicial ($T_0$):} Calculada para permitir un empeoramiento 
+    relativo inicial $\mu=0.2$ con probabilidad $\phi=0.3$.
+    \item \textbf{C\'{a}lculo de $T_0$:} Se usa $|f(S_0)|$ para evitar temperaturas negativas, ya que el fitness es negativo.
+    \item \textbf{Esquema de Enfriamiento:} Cauchy modificado $T_{k+1} = \frac{T_k}{1 + \beta \cdot T_k}$.
+    \item \textbf{Factor $\beta$:} Calculado para realizar exactamente $M$ enfriamientos, 
+    donde $M = \text{EvaluacionesTotales} / \text{L(T)}$.
+    \item \textbf{Condición de Parada:} $T < T_f$ ($10^{-3}$), 0 éxitos en una iteración, 
+    o alcanzar el presupuesto de evaluaciones.
+\end{itemize}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Problema $P$, $\mu$, $\phi$, $T_f$, $max\_vecinos$, $max\_exitos$}
+\KwOut{Mejor solución encontrada}
+
+$S \leftarrow$ Generar-Solución-Aleatoria()\;
+$T_0 \leftarrow \frac{\mu \cdot |f(S)|}{-\ln(\phi)}$\;
+$T \leftarrow T_0$\;
+$Best \leftarrow S$\;
+
+\While{$T > T_f$ \textbf{and} n\_exitos $> 0$ \textbf{and} quepan evaluaciones}{
+    n\_exitos $\leftarrow 0$\;
+    n\_vecinos $\leftarrow 0$\;
+    \While{n\_vecinos $< max\_vecinos$ \textbf{and} n\_exitos $< max\_exitos$}{
+        $S' \leftarrow$ Generar-Vecino-Aleatorio($S$)\;
+        $\Delta f \leftarrow f(S) - f(S')$ \tcp*{Maximización}
+        \If{$\Delta f < 0$ \textbf{or} $U(0,1) \leq \exp(-\Delta f / T)$}{
+            $S \leftarrow S'$\;
+            n\_exitos $\leftarrow n\_exitos + 1$\;
+            \If{$f(S) > f(Best)$}{$Best \leftarrow S$\;}
+        }
+        n\_vecinos $\leftarrow n\_vecinos + 1$\;
+    }
+    $T \leftarrow \frac{T}{1 + \beta \cdot T}$\;
+}
+\Return $Best$\;
+\caption{Enfriamiento Simulado (ES)}
+\label{alg:es}
+\end{algorithm}
+
+\subsection{Búsqueda Multiarranque Básica (BMB)}
+
+Este método de trayectoria múltiple reinicia la búsqueda local 5 veces desde 
+puntos aleatorios para explorar distintas cuencas de atracción.
+
+\begin{itemize}
+    \item \textbf{Número de arranques:} 5.
+    \item \textbf{Búsqueda Local:} BL de primer mejor (P1) limitada a 2000 evaluaciones 
+    por cada arranque.
+\end{itemize}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Problema $P$, num\_starts=5, max\_evals\_bl=2000}
+\KwOut{Mejor solución global}
+
+$GlobalBest \leftarrow$ null\;
+\For{$i = 1$ \KwTo num\_starts}{
+    $S \leftarrow$ Generar-Solución-Aleatoria()\;
+    $S^* \leftarrow$ Búsqueda-Local($S$, max\_evals\_bl)\;
+    \If{$f(S^*) > f(GlobalBest)$}{
+        $GlobalBest \leftarrow S^*$\;
+    }
+}
+\Return $GlobalBest$\;
+\caption{Búsqueda Multiarranque Básica (BMB)}
+\label{alg:bmb}
+\end{algorithm}
+
+\subsection{Búsqueda Local Reiterada (ILS)}
+
+A diferencia de BMB, ILS no reinicia a ciegas, sino que muta la mejor solución 
+conocida para saltar a valles cercanos.
+
+\begin{itemize}
+    \item \textbf{Mutación (Perturbación):} Se selecciona aleatoriamente un 20\% de los 
+    activos del portfolio y se desordenan sus pesos (barajado aleatorio).
+    \item \textbf{Criterio de Aceptación:} Criterio del mejor (siempre mutamos el mejor global).
+    \item \textbf{Configuración:} 1 arranque aleatorio + 4 arranques mutados, todos 
+    seguidos de BL (2000 evals).
+\end{itemize}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Problema $P$, num\_starts=5, mutation\_rate=0.2}
+\KwOut{Mejor solución global}
+
+$S \leftarrow$ Generar-Solución-Aleatoria()\;
+$Best \leftarrow$ Búsqueda-Local($S$, 2000)\;
+
+\For{$i = 2$ \KwTo num\_starts}{
+    $S' \leftarrow$ Mutar($Best$, 0.2)\;
+    $S'' \leftarrow$ Búsqueda-Local($S'$, 2000)\;
+    \If{$f(S'') > f(Best)$}{
+        $Best \leftarrow S''$\;
+    }
+}
+\Return $Best$\;
+\caption{Búsqueda Local Reiterada (ILS)}
+\label{alg:ils}
+\end{algorithm}
+
+\subsection{Hibridación ILS-ES}
+
+Esta variante sustituye el motor de búsqueda local del ILS por un enfriamiento 
+simulado completo. El objetivo es combinar la diversificación por mutación 
+brusca del ILS con la capacidad de escape de óptimos locales por probabilidad 
+del ES.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Problema $P$, parámetros de ES, mutation\_rate=0.2}
+\KwOut{Mejor solución global}
+
+$S \leftarrow$ Generar-Solución-Aleatoria()\;
+$Best \leftarrow$ Enfriamiento-Simulado($S$, parámetros\_ES)\;
+
+\For{$i = 2$ \KwTo num\_starts}{
+    $S' \leftarrow$ Mutar($Best$, 0.2)\;
+    $S'' \leftarrow$ Enfriamiento-Simulado($S'$, parámetros\_ES)\;
+    \If{$f(S'') > f(Best)$}{
+        $Best \leftarrow S''$\;
+    }
+}
+\Return $Best$\;
+\caption{Hibridación ILS-ES}
+\label{alg:ils-es}
+\end{algorithm}
