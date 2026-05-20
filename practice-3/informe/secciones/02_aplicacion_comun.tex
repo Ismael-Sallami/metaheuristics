@@ -1,0 +1,132 @@
+\section{Aplicación de los Algoritmos al Problema de Portfolio}
+\label{sec:aplicacion}
+
+En este apartado se recogen los elementos comunes a todos los algoritmos empleados en la práctica. La idea es fijar primero cómo se representa una solución, cómo se evalúa y cómo se mantiene la factibilidad; después se describen los operadores compartidos de selección, cruce y mutación.
+
+\subsection{Esquema de representación}
+Se utiliza una \textbf{representación real} basada en un vector de pesos
+$$
+S = (s_1, s_2, \dots, s_N)
+$$
+donde cada componente $s_i$ indica la fracción del capital invertida en el activo $i$. Una solución es factible si se cumplen simultáneamente estas condiciones:
+\begin{itemize}
+    \item $\sum_{i=1}^N s_i = 1$.
+    \item Para cada activo, o bien $s_i = 0$, o bien $s_i \in [lo, hi]$.
+\end{itemize}
+
+La población inicial se genera aleatoriamente y, a continuación, se aplica reparación para garantizar que todos los individuos parten de soluciones válidas.
+
+\subsection{Función objetivo}
+La calidad de una cartera se mide con una función de \textit{fitness} que combina beneficio y riesgo. Como en el problema se busca maximizar, una mayor aptitud indica una mejor solución\footnote{El cambio que se ha introducido es que se ha realizado la raíz para el cálculo del riesgo.}.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Solución $S$, beneficios logarítmicos $logBenefits$, matriz de covarianza $Cov$, parámetro $\lambda$}
+\KwOut{Valor de \textit{fitness} de $S$}
+
+$beneficio \leftarrow 0$
+
+\For{$i \leftarrow 1$ \KwTo $N$}{
+    $beneficio \leftarrow beneficio + s_i \cdot logBenefits_i$
+}
+
+$riesgo \leftarrow 0$
+
+\For{$i \leftarrow 1$ \KwTo $N$}{
+    \For{$j \leftarrow 1$ \KwTo $N$}{
+        $riesgo \leftarrow riesgo + s_i \cdot s_j \cdot Cov(i,j)$
+    }
+}
+
+\Return $beneficio - \lambda \cdot \sqrt{\max(0, riesgo)}$
+\caption{Evaluación de una solución}
+\end{algorithm}
+\textit{Nota: Se incorpora el operador $\max(0, \cdot)$ dentro de la raíz cuadrada para garantizar la estabilidad numérica del algoritmo, evitando valores negativos infinitesimales producidos por errores de precisión en punto flotante (IEEE 754).}
+
+\subsection{Operador de reparación}
+Los operadores genéticos pueden producir soluciones no factibles, por lo que después de cada cruce o mutación se aplica un operador de reparación. Su misión es devolver el vector al espacio de búsqueda permitido sin alterar innecesariamente la estructura de la solución\footnote{Se usa el mismo pseudocódigo de la práctica 1 ya que no ha sufrido cambios.}.
+
+\newpage
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Vector de pesos inválido $w$, límites $lo$ y $hi$, tolerancia $\epsilon$}
+\KwOut{Vector de pesos $w$ factible}
+ \tcp{Fase 1: Normalización inicial}
+ $suma \leftarrow \sum_{i=1}^{N} w_i$\;
+ \If{$suma > 0$ y $|suma - 1.0| > \epsilon$}{
+    $w_i \leftarrow w_i / suma \quad \forall i$\;
+ }
+ \tcp{Fase 2: Poda estricta de límites}
+ \For{$i \leftarrow 1$ \KwTo $N$}{
+    \If{$w_i < lo$}{ $w_i \leftarrow 0.0$ }
+    \ElseIf{$w_i > hi$}{ $w_i \leftarrow hi$ }
+ }
+ \tcp{Fase 3: Redistribución iterativa}
+ $suma \leftarrow \sum_{i=1}^{N} w_i$\;
+ \While{$|suma - 1.0| > \epsilon$}{
+    $\delta \leftarrow 1.0 - suma$\;
+    \eIf{$\delta > 0$}{
+        \tcp{Falta capital: repartir entre activos sin saturar}
+        $C \leftarrow \{i \mid 0 < w_i < hi\}$\;
+        \eIf{$C \neq \emptyset$}{
+            $incremento \leftarrow \delta / |C|$\;
+            \For{$i \in C$}{
+                $w_i \leftarrow w_i + \min(incremento, hi - w_i)$\;
+            }
+        }{
+            \tcp{Retorno: no hay activos con margen}
+            Seleccionar un índice $k$ aleatorio donde $w_k == 0$\;
+            $w_k \leftarrow lo$\;
+        }
+    }{
+        \tcp{Sobra capital: recortar de activos activos}
+        $C \leftarrow \{i \mid w_i > lo\}$\;
+        $decremento \leftarrow |\delta| / |C|$\;
+        \For{$i \in C$}{
+            $w_i \leftarrow w_i - \min(decremento, w_i - lo)$\;
+        }
+    }
+    $suma \leftarrow \sum_{i=1}^{N} w_i$\;
+ }
+ \Return $w$\;
+ \caption{Operador de Reparación \texttt{fix(w)}}
+ \label{alg:fix}
+\end{algorithm}
+
+
+\subsection{Operador de Vecindad (Trayectorias)}
+
+Tanto la Búsqueda Local (BL) como el Enfriamiento Simulado (ES) utilizan el mismo operador de vecindad basado en la transferencia de capital entre activos.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Solución $S$, ratio de transferencia $r=0.4$}
+\KwOut{Solución vecina $S'$}
+
+Seleccionar aleatoriamente un par de activos distintos $(i, j)$ de la cartera\;
+\If{$s_i > 0$}{
+    $transferencia \leftarrow s_i \cdot r$\;
+    $s'_i \leftarrow s_i - transferencia$\;
+    $s'_j \leftarrow s_j + transferencia$\;
+    Reparar solución para asegurar límites $[lo, hi]$\;
+}
+\Return $S'$\;
+\caption{Operador de vecindad por transferencia}
+\end{algorithm}
+
+\subsection{Operador de Mutación Brusca (ILS)}
+
+El algoritmo ILS requiere una perturbación más fuerte que el operador de vecindad para saltar a otras regiones del espacio de búsqueda.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Solución $S$, tasa de mutación $m=0.2$}
+\KwOut{Solución mutada $S'$}
+
+$N_{mut} \leftarrow \max(2, |S| \cdot m)$ activos elegidos al azar\;
+Extraer los pesos $w_{idx}$ de esos activos\;
+Barajar aleatoriamente (\textit{shuffle}) el conjunto de pesos extraídos\;
+Reasignar los pesos barajados a los mismos activos originales\;
+\Return $S'$\;
+\caption{Mutación por barajado (ILS)}
+\end{algorithm}
