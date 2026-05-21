@@ -484,10 +484,12 @@ int main(int argc, char *argv[])
             if (config.exp_run_p3 == 1)
             {
                 size_t n = prob_train.getSolutionSize();
-                // If es_max_vecinos is -1, we dynamically scale it to 10 * dimension (n).
+                // If es_max_vecinos is -1, we dynamically scale it to 10 * dimension (n),
+                // as required by the guide: max_vecinos = 10·m.
                 int es_max_vecinos = (config.es_max_vecinos == -1) ? 10 * n : config.es_max_vecinos;
-                // If es_max_exitos is -1, we scale it to 10% of the max neighbors per level.
-                int es_max_exitos = (config.es_max_exitos == -1) ? 0.1 * es_max_vecinos : config.es_max_exitos;
+                // max_exitos = 1·m, as required by the guide. Expressed directly for clarity,
+                // not as 0.1*max_vecinos (though they are numerically equivalent).
+                int es_max_exitos = (config.es_max_exitos == -1) ? 1 * static_cast<int>(n) : config.es_max_exitos;
 
                 SimulatedAnnealing es(config.es_mu, config.es_phi, config.es_tf, config.ls_ratio, es_max_vecinos, es_max_exitos);
                 BMB bmb(config.traj_num_starts, config.traj_max_evals_bl, config.ls_ratio);

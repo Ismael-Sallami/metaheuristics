@@ -28,12 +28,19 @@ ResultMH<double> SimulatedAnnealing::optimize(Problem<double> &problem, int maxe
     // T0 = (mu * |f(S0)|) / -log(phi)
     // We use absolute value to ensure positive temperature as fitness is usually negative.
     double T0 = (m_mu * abs(current_fitness)) / -log(m_phi);
+
+    // Guard required by the practice guide
+    // If T0 <= Tf the cooling scheme would be degenerate; we return the initial solution directly.
+    if (T0 <= m_tf) {
+        return ResultMH<double>(best_sol, best_fitness, evals);
+    }
+
     double T = T0;
 
     // Determine the number of cooling steps M.
     // If max_vecinos is L, then M = MaxEvals / L.
     double M = static_cast<double>(maxevals) / m_max_vecinos;
-    if (M < 1.0) M = 1.0; 
+    if (M < 1.0) M = 1.0;
     
     // Calculate beta for the Modified Cauchy cooling scheme.
     double beta = (T0 - m_tf) / (M * T0 * m_tf);
@@ -57,10 +64,10 @@ ResultMH<double> SimulatedAnnealing::optimize(Problem<double> &problem, int maxe
         while (n_vecinos < m_max_vecinos && n_exitos < m_max_exitos && evals < maxevals) {
             n_vecinos++; 
 
-            // Pick a random pair from the pre-generated neighborhood.
-            auto& pair = neighborhood[Random::get<size_t>(0, neighborhood.size() - 1)];
-            int i = pair.first;
-            int j = pair.second;
+            // Pick a random move from the pre-generated neighborhood.
+            auto& move = neighborhood[Random::get<size_t>(0, neighborhood.size() - 1)];
+            int i = move.first;
+            int j = move.second;
 
             // Skip moves if the source asset has no weight.
             if (current_sol[i] == 0.0) {
