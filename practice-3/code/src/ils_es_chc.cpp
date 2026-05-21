@@ -88,7 +88,7 @@ ResultMH<double> ILSES_CHC::optimize(Problem<double> &problem, int maxevals) {
     for (int start = 2; start <= m_num_starts && evals < maxevals; start++) {
         tSolution<double> mutated_sol;
 
-        // --- CHC MECHANISM: STAGNATION DETECTION AND DIVERSIFICATION ---
+        //  CHC MECHANISM: STAGNATION DETECTION AND DIVERSIFICATION 
         if (stagnation_counter >= m_limit_stagnation) {
             // Apply DIVERSIFICATION: macro-mutation (Option A: CHC)
             mutated_sol = best_sol;
@@ -111,7 +111,7 @@ ResultMH<double> ILSES_CHC::optimize(Problem<double> &problem, int maxevals) {
         ResultMH<double> result = es.optimize(problem, remaining_evals, mutated_sol);
         evals += result.evaluations;
 
-        // --- ACCEPTANCE CRITERION: BEST-OF (classic ILS) ---
+        //  ACCEPTANCE CRITERION: BEST-OF (classic ILS)
         if (result.fitness > best_fitness) {
             best_sol = result.solution;
             best_fitness = result.fitness;
