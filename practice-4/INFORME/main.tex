@@ -1,0 +1,136 @@
+%% ============================================================
+%%  INFORME PRÁCTICA 4 — Metaheurísticas
+%%  Liver Cancer Algorithm (LCA) — CEC2017
+%%  Autor: Ismael Sallami
+%% ============================================================
+\documentclass[12pt, a4paper]{article}
+
+% ---- Codificación y tipografía ----
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{lmodern}
+
+% ---- Márgenes ----
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+
+% ---- Matemáticas ----
+\usepackage{amsmath, amssymb, amsthm}
+
+% ---- Gráficos y colores ----
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows.meta, positioning}
+
+% ---- Tablas ----
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{longtable}
+
+% ---- Código fuente ----
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+% ---- Hipervínculos ----
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    citecolor=green!50!black,
+    urlcolor=blue!70!black,
+    pdftitle={Práctica 4 MH — Liver Cancer Algorithm},
+    pdfauthor={Ismael Sallami},
+    pdfsubject={Metaheurísticas — CEC2017}
+}
+
+% ---- Cabeceras ----
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Metaheurísticas — Práctica 4}
+\fancyhead[R]{\small Liver Cancer Algorithm (LCA)}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ---- Otros ----
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{csquotes}
+
+% ---- Definición de colores personalizados ----
+\definecolor{lcaRed}{RGB}{180,30,30}
+\definecolor{lcaGray}{RGB}{90,90,90}
+\definecolor{codeBg}{RGB}{237,247,238}      % fondo verde muy claro
+\definecolor{codeRule}{RGB}{70,130,80}      % regla verde del marco
+\definecolor{commentGreen}{RGB}{30,110,40}  % comentarios en cursiva
+\definecolor{keywordBlue}{RGB}{40,70,140}
+
+% ---- Configuración de listings ----
+\lstset{
+    backgroundcolor=\color{codeBg},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{keywordBlue}\bfseries,
+    commentstyle=\color{commentGreen}\itshape,
+    stringstyle=\color{lcaRed},
+    identifierstyle=\color{black},
+    numbers=left,
+    numberstyle=\tiny\itshape\color{lcaGray},
+    numbersep=10pt,
+    frame=single,
+    frameround=tttt,                         % esquinas redondeadas (formal)
+    framerule=0.9pt,
+    rulecolor=\color{codeRule},
+    framexleftmargin=4pt,
+    xleftmargin=14pt,
+    xrightmargin=4pt,
+    aboveskip=12pt,
+    belowskip=12pt,
+    breaklines=true,
+    breakatwhitespace=true,
+    captionpos=b,
+    abovecaptionskip=6pt,
+    tabsize=4,
+    showstringspaces=false,
+    columns=fullflexible,
+    keepspaces=true,
+    language=C++
+}
+
+% ---- Estilo de los pies (caption) de los listados ----
+\DeclareCaptionFormat{lcaListing}{\itshape\small#1#2#3}
+\captionsetup[lstlisting]{format=lcaListing,labelfont={bf,it},textfont=it}
+
+% ---- Macros útiles ----
+\newcommand{\lca}{\textsc{lca}}
+\newcommand{\cec}{\textsc{cec2017}}
+\newcommand{\xbest}{X_{\text{best}}}
+
+%% ============================================================
+\begin{document}
+%% ============================================================
+
+% ---- Portada ----
+\input{portada}
+
+% ---- Índice ----
+\tableofcontents
+\newpage
+
+% ---- Partes del informe ----
+\input{parte1_descripcion}   % Parte 1: Descripción del algoritmo LCA
+\input{parte2_experimental}  % Parte 2: Estudio experimental CEC2017
+\input{parte3_memetico}      % Parte 3: Algoritmo memético LCA + Solis-Wets
+\input{parte4_mejoras}       % Parte 4: Mejoras y extensiones
+
+% ---- Bibliografía ----
+\newpage
+\bibliographystyle{plain}
+\bibliography{referencias}
+
+\end{document}

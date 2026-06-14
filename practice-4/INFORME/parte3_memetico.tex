@@ -1,0 +1,189 @@
+%% ============================================================
+%%  PARTE 3 — Algoritmo Memético: LCA + Solis-Wets
+%%  Hasta 1.0 punto
+%% ============================================================
+
+\newpage
+\section{Parte III: Hibridación Memética — LCA\,+\,Solis-Wets}
+\label{sec:parte3}
+
+\subsection{Motivación de la hibridación}
+
+Un \textbf{algoritmo memético} combina una metaheurística poblacional con una
+estrategia de búsqueda local, con el objetivo de explotar más eficientemente las
+regiones prometedoras del espacio de soluciones. La idea central es que la búsqueda
+global del LCA localice cuencas de atracción de buena calidad, y que el refinamiento
+local las explore con mayor profundidad de lo que el propio LCA podría hacer por sí solo.
+
+\paragraph{¿Qué es Solis-Wets?}
+\textbf{Solis-Wets} es un método clásico de \emph{búsqueda local estocástica} propuesto
+por Solis y Wets en 1981 \cite{solis1981minimization}. Opera por muestreo aleatorio
+adaptativo: en cada paso genera una perturbación gaussiana $\mathbf{d}\sim\mathcal{N}(0,\sigma)$
+y la prueba en torno a la solución actual incorporando un \textbf{sesgo direccional}
+$\mathbf{b}$ que \emph{memoriza} las direcciones que han producido mejora (acelerando el
+avance por valles), y la dirección opuesta si no la hay. El \textbf{radio $\sigma$ es
+adaptativo}: se agranda tras varios éxitos consecutivos y se encoge tras varios fallos,
+ajustando automáticamente la escala del refinamiento. Al no usar gradiente, encaja de
+forma natural en problemas de caja negra como CEC2017. Es, por tanto, un explotador puro
+y barato, idóneo para corregir el cuello de botella diagnosticado en la Parte~II
+(explotación local deficiente del LCA base).
+
+La elección de \textbf{Solis-Wets} como método de búsqueda local se justifica por:
+\begin{itemize}
+  \item Es un método clásico y ampliamente validado para optimización continua.
+  \item No requiere información del gradiente, lo que lo hace compatible con las
+        funciones de la competición CEC2017 (caja negra).
+  \item Su coste por iteración es lineal en $D$, lo que permite aplicarlo de forma
+        eficiente sin superar el presupuesto total de evaluaciones.
+  \item Ya está disponible en el repositorio \texttt{cec2017real} como ejemplo de referencia.
+\end{itemize}
+
+\subsection{Diseño del algoritmo híbrido LCA-SW}
+
+El esquema de hibridación adoptado es el de \textbf{hibridación en cascada periódica}:
+cada $k$ generaciones del LCA, se aplica Solis-Wets sobre los $m$ mejores individuos
+de la población. Esto permite que la búsqueda global del LCA descubra nuevas regiones,
+y la búsqueda local refine las más prometedoras.
+
+\begin{algorithm}[H]
+\caption{LCA Memético (LCA-SW)}
+\label{alg:lcasw}
+\begin{algorithmic}[1]
+\Require $N$, $T$, $lb$, $ub$, $k$ (frecuencia de LS), $m$ (individuos refinados), $\delta_0$ (radio inicial SW)
+\Ensure $X_{\text{best}}$
+\State Inicializar población con ROBL; evaluar fitness \Comment{mismo que LCA base}
+\State $X_{\text{best}} \leftarrow$ mejor individuo inicial
+\For{$t = 1$ \textbf{to} $T$}
+  \State Ejecutar una generación del LCA (Algoritmo~\ref{alg:lca}) \Comment{exploración + explotación}
+  \If{$t \mod k = 0$} \Comment{cada $k$ generaciones}
+    \State Seleccionar los $m$ mejores individuos de la población
+    \For{cada individuo seleccionado $\mathbf{x}_i$}
+      \State Aplicar Solis-Wets($\mathbf{x}_i$, $\delta_0$, $\text{maxEvals\_LS}$) \Comment{refinamiento local}
+      \State Actualizar $X_{\text{best}}$ si mejora
+    \EndFor
+  \EndIf
+  \State $\zeta \leftarrow t/T$ \Comment{actualizar parámetro adaptativo}
+\EndFor
+\State \Return $X_{\text{best}}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Gestión del presupuesto de evaluaciones}
+
+Un aspecto crítico en el algoritmo memético es el reparto del presupuesto total de
+evaluaciones entre la búsqueda global (LCA) y la búsqueda local (Solis-Wets). En esta
+implementación no se reserva un porcentaje fijo a priori: cada búsqueda local tiene un
+coste \emph{fijo} de $\text{Eval}_{\text{LS}} = 100$ evaluaciones y se aplica sobre los
+$m=3$ mejores individuos cada $k=10$ generaciones. Todas las evaluaciones consumidas por
+Solis-Wets se descuentan del mismo contador global \texttt{max\_evals} que la búsqueda
+global, de modo que el coste local total es aproximadamente
+
+\begin{equation}
+  \text{Coste}_{\text{LS}} \approx \left\lfloor \frac{T}{k} \right\rfloor \cdot m \cdot \text{Eval}_{\text{LS}},
+\end{equation}
+
+donde $T$ es el número de generaciones efectivas. Con $k=10$, $m=3$ y
+$\text{Eval}_{\text{LS}}=100$, la búsqueda local consume del orden del 15--20\% del
+presupuesto, fracción que emerge de los parámetros y no de un reparto impuesto.
+
+\subsection{Implementación del LCA-SW}
+
+La implementaci\'on completa del algoritmo memético ---incluida la rutina Solis-Wets con control adaptativo del radio $\delta$--- se encuentra en el fichero \texttt{testlcasw.cc} del software entregado.
+
+\subsection{Parámetros del LCA-SW}
+
+\begin{table}[h!]
+\centering
+\caption{Parámetros del algoritmo memético LCA-SW}
+\label{tab:params_sw}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Parámetro} & \textbf{Valor} & \textbf{Descripción} \\
+\midrule
+$N$ & 30 & Tamaño de la población \\
+$k$ & 10 & Frecuencia de búsqueda local (cada $k$ generaciones) \\
+$m$ & 3  & Número de individuos refinados por LS \\
+$\delta_0$ & 0.4 & Radio inicial de Solis-Wets \\
+$\text{Eval}_{\text{LS}}$ & 100 & Evaluaciones por llamada a Solis-Wets \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Resultados del LCA-SW y análisis comparativo}
+
+La Tabla~\ref{tab:comp_sw} compara el error medio del LCA base frente al híbrido memético
+LCA-SW sobre una selección representativa de funciones, en las tres dimensiones
+(31 ejecuciones por celda).
+
+\begin{table}[h!]
+\centering
+\caption{Error medio: LCA base vs.\ LCA-SW en $D \in \{10,30,50\}$ (31 ejecuciones)}
+\label{tab:comp_sw}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+& \multicolumn{2}{c}{\textbf{$D=10$}} & \multicolumn{2}{c}{\textbf{$D=30$}} & \multicolumn{2}{c}{\textbf{$D=50$}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+\textbf{Función} & \textbf{LCA} & \textbf{LCA-SW} & \textbf{LCA} & \textbf{LCA-SW} & \textbf{LCA} & \textbf{LCA-SW} \\
+\midrule
+F01 (Uni.)   & 2.122e+09 & 4.659e+02 & 1.665e+10 & 7.969e+02 & 4.782e+10 & 5.194e+02 \\
+F03 (Uni.)   & 8.545e+03 & 1.713e-01 & 6.203e+04 & 5.563e+04 & 1.309e+05 & 8.227e+04 \\
+F04 (Multi.) & 4.711e+01 & 1.831e+00 & 1.365e+03 & 8.481e+01 & 5.528e+03 & 1.504e+02 \\
+F11 (Híb.)   & 7.481e+01 & 1.812e+01 & 2.103e+03 & 1.041e+02 & 8.602e+03 & 1.574e+02 \\
+F13 (Híb.)   & 3.787e+03 & 2.972e+03 & 2.223e+08 & 1.290e+04 & 4.351e+09 & 1.101e+04 \\
+F15 (Híb.)   & 3.260e+02 & 2.814e+02 & 1.351e+06 & 5.686e+03 & 5.119e+08 & 4.457e+03 \\
+F25 (Comp.)  & 4.994e+02 & 4.224e+02 & 6.517e+02 & 4.091e+02 & 2.681e+03 & 5.866e+02 \\
+F28 (Comp.)  & 6.353e+02 & 4.376e+02 & 1.247e+03 & 4.013e+02 & 3.970e+03 & 5.079e+02 \\
+F30 (Comp.)  & 1.426e+05 & 5.845e+04 & 3.574e+07 & 9.849e+05 & 2.989e+08 & 1.985e+07 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Ranking de Friedman (LCA base vs.\ LCA-SW, 30 funciones) y test de Wilcoxon}
+\label{tab:sw_stats}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Métrica} & \textbf{$D=10$} & \textbf{$D=30$} & \textbf{$D=50$} \\
+\midrule
+Ranking Friedman LCA base & 1.83 & 2.00 & 1.93 \\
+Ranking Friedman LCA-SW   & \textbf{1.17} & \textbf{1.00} & \textbf{1.07} \\
+LCA-SW gana (de 30 func.) & 25 & 30 & 28 \\
+Wilcoxon SW vs.\ base ($p$) & $0.0005$ & $<10^{-4}$ & $<10^{-4}$ \\
+Resultado & SW mejor & SW mejor & SW mejor \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Discusión}
+
+La hibridación memética LCA-SW mejora al LCA base de forma \textbf{estadísticamente
+significativa en las tres dimensiones} (Wilcoxon $p < 0.001$), con un ranking de Friedman
+prácticamente perfecto a favor de LCA-SW ($\approx 1.0$). En el cómputo global sobre las
+30 funciones, LCA-SW gana al LCA base en la inmensa mayoría de casos.
+
+\paragraph{Impacto en funciones unimodales (F1).}
+El efecto más dramático se da en F1. El error del LCA base es de $2.1\times 10^9$ ($D=10$),
+$1.7\times 10^{10}$ ($D=30$) y $4.8\times 10^{10}$ ($D=50$), reflejo de su incapacidad para
+afinar en valles estrechos. Tras incorporar Solis-Wets el error cae a $466$, $797$ y $519$
+respectivamente: una mejora de \textbf{7 a 8 órdenes de magnitud}. Esto confirma que la
+debilidad del LCA no estaba en la exploración, sino en una explotación local demasiado
+grosera, corregida por el paso adaptativo de Solis-Wets.
+
+\paragraph{Escalado con la dimensión.}
+A diferencia del LCA base, cuyo error explota al aumentar $D$, el LCA-SW mantiene la mejora
+en todas las dimensiones e incluso la acentúa en las funciones híbridas (F11, F13, F15),
+donde la búsqueda local recupera varios órdenes de magnitud. La intensificación periódica
+sobre los $M=3$ mejores tumores es, por tanto, especialmente valiosa en alta dimensión, donde
+el refinamiento manual del LCA resulta más insuficiente.
+
+\paragraph{Ajuste del equilibrio exploración-explotación.}
+El éxito de LCA-SW radica en limitar Solis-Wets a un pequeño subconjunto de élites
+($M=3$) y solo cada $K=10$ generaciones. Así, la mayor parte de la población sigue
+explorando con vuelos de Lévy mientras unas pocas soluciones se refinan en profundidad,
+combinando exploración global y explotación local sin agotar el presupuesto ni provocar
+convergencia prematura.
