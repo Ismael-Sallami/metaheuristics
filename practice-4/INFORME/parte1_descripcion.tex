@@ -1,0 +1,253 @@
+%% ============================================================
+%%  PARTE 1 — Descripción del Liver Cancer Algorithm (LCA)
+%%  Hasta 1.0 punto
+%% ============================================================
+
+\section{Parte I: El Liver Cancer Algorithm}
+\label{sec:parte1}
+
+\subsection{Motivación y contexto}
+
+La búsqueda de nuevas metaheurísticas eficientes es una necesidad constante en el campo de
+la optimización, especialmente ante el teorema \emph{No Free Lunch} \cite{wolpert1997nfl},
+que establece que ningún algoritmo es universalmente superior a todos los demás para todo
+tipo de problemas. En este contexto, el \textbf{Liver Cancer Algorithm (LCA)} surge como
+una propuesta novedosa publicada en 2023 por Houssein \emph{et al.} \cite{houssein2023lca}
+en la revista \emph{Computers in Biology and Medicine}.
+
+La motivación del LCA reside en modelar matemáticamente el comportamiento agresivo y
+adaptativo del \textbf{carcinoma hepatocelular} (cáncer de hígado primario). Esta enfermedad
+presenta características biológicas especialmente ricas desde el punto de vista computacional:
+el tumor crece de forma local y adaptativa, replica sus células en regiones cercanas y,
+en estados avanzados, envía metástasis a órganos lejanos. Estas tres etapas se traducen
+directamente en los tres operadores principales del algoritmo.
+
+\subsection{Fundamentación biológica}
+
+El LCA extrae su inspiración de los siguientes mecanismos oncológicos:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+  \item \textbf{Crecimiento adaptativo del tumor} (\emph{explotación}): el tumor evalúa su
+    entorno local y crece hacia las regiones con mayor disponibilidad de recursos (vascularización,
+    nutrientes). En términos de optimización, esto equivale a una búsqueda local alrededor
+    de la mejor solución conocida.
+
+  \item \textbf{Replicación y proliferación celular} (\emph{transición}): las células tumorales
+    se replican siguiendo un modelo de crecimiento exponencial. La tasa de crecimiento
+    introduce un elemento estocástico controlado que permite explorar el vecindario inmediato
+    con cierta amplitud.
+
+  \item \textbf{Metástasis} (\emph{exploración global}): en la fase más avanzada, las células
+    malignas viajan a través del torrente sanguíneo mediante saltos de tipo \emph{Lévy Flight},
+    colonizando regiones lejanas e inesperadas del espacio de búsqueda.
+
+  \item \textbf{Operadores genéticos de metástasis} (mutación y cruce): modelan la heterogeneidad
+    genética del tumor, introduciendo variabilidad y combinando información de distintas
+    soluciones para generar descendencia más apta.
+
+  \item \textbf{ROBL — Random Opposition-Based Learning}: inicializa la población generando
+    soluciones y sus opuestas aleatorias, asegurando una cobertura inicial diversa del
+    espacio de búsqueda.
+\end{enumerate}
+
+\subsection{Modelo matemático detallado}
+
+\subsubsection{Inicialización mediante ROBL}
+
+Las posiciones iniciales de la población se generan mediante la ecuación:
+
+\begin{equation}
+  \label{eq:robl}
+  \text{Position}^*_{j,i} = \frac{\pi}{6}(\ell_j)(w_j)(h_j)
+    - \Bigl(lb + (ub - lb) - r_d \cdot \text{Position}^j_i\Bigr)
+\end{equation}
+
+donde $i = 1,\ldots,N$, $j = 1,\ldots,D$, $lb$ y $ub$ son los límites del espacio de
+búsqueda, y $r_d \in [0,1]$ es un número aleatorio. Los parámetros $\ell, w, h$
+(longitud, anchura, altura del tumor) son números aleatorios en $[0,1]$ que modelan las
+dimensiones del hemi-elipsoide tumoral.\footnote{Un \emph{hemi-elipsoide} no
+designa un tipo de tumor, sino un \textbf{modelo geométrico-matemático}: muchos
+tumores sólidos (mama, hígado) se aproximan por una forma tridimensional de media
+esfera achatada (medio elipsoide), de la que el LCA toma sus parámetros $\ell$, $w$
+y $h$ para modelar el crecimiento.}
+
+\subsubsection{Crecimiento adaptativo (explotación)}
+
+El incremento de tamaño del tumor se calcula como:
+
+\begin{equation}
+  \label{eq:crec}
+  \text{Position} = \frac{\pi}{6} \cdot f \cdot (l \cdot w)^{3/2}
+\end{equation}
+
+siendo $f=1$ una constante que caracteriza el tipo de tumor. Esta ecuación modela el
+volumen del hemi-elipsoide y proporciona el desplazamiento local de cada agente de búsqueda.
+
+\subsubsection{Replicación y vuelo de Lévy (exploración global)}
+
+El crecimiento exponencial del tumor se rige por:
+
+\begin{equation}
+  \label{eq:repl}
+  (PG)_i = \frac{dV}{dt} = r \cdot \text{Position},
+  \quad t \in [1\ldots T],\; i \in [1\ldots N]
+\end{equation}
+
+La dispersión mediante vuelo de Lévy se implementa como:
+
+\begin{equation}
+  \label{eq:levy}
+  L_v(D) = 0.01 \times \text{rand}(1,D) \times \frac{\sigma}{|\text{rand}(1,D)|^{1/\beta}}
+\end{equation}
+
+\begin{equation}
+  \sigma = \left(\frac{\Gamma(1+\beta)\sin(\pi\beta/2)}
+    {\Gamma\!\left(\frac{1+\beta}{2}\right)\cdot\beta\cdot 2^{(\beta-1)/2}}\right)^{1/\beta}
+\end{equation}
+
+La actualización de posición integra ambos mecanismos:
+
+\begin{align}
+  y &= \text{Position} + PG \label{eq:y}\\
+  Z &= Y + S \cdot LF(D) \label{eq:Z}\\
+  \text{Position}_i^{t+1} &=
+    \begin{cases}
+      y & \text{si } fit(y) < fit(\text{Position}_i^t) \\
+      Z & \text{si } fit(Z) < fit(\text{Position}_i^t)
+    \end{cases} \label{eq:update}
+\end{align}
+
+\subsubsection{Operadores genéticos: mutación y cruce}
+
+La \textbf{mutación adaptativa} está controlada por el parámetro $\zeta = t/T$,
+que evoluciona linealmente de 0 a 1 a lo largo de las iteraciones:
+
+\begin{equation}
+  y_{\text{Mut}} =
+  \begin{cases}
+    \text{Position} & \text{si } \rho_1 \geq \zeta \\
+    y               & \text{en otro caso}
+  \end{cases},
+  \qquad
+  z_{\text{Mut}} =
+  \begin{cases}
+    \text{Position} & \text{si } \rho_2 \geq \zeta \\
+    z               & \text{en otro caso}
+  \end{cases}
+  \label{eq:mut}
+\end{equation}
+
+El \textbf{cruce} combina linealmente las dos versiones mutadas:
+
+\begin{equation}
+  w_{\text{Cross}} = \tau \cdot y_{\text{Mut}} + (1-\tau') \cdot z_{\text{Mut}},
+  \quad \tau \neq \tau'
+  \label{eq:cross}
+\end{equation}
+
+La \textbf{selección codiciosa} elige al mejor entre padre e hijo:
+
+\begin{equation}
+  \text{Position}_i^{t+1} =
+  \begin{cases}
+    y_{\text{Mut}}    & \text{si } fit(y_{\text{Mut}}) < fit(\text{Position}_i) \\
+    z_{\text{Mut}}    & \text{si } fit(z_{\text{Mut}}) < fit(\text{Position}_i) \\
+    w_{\text{Cross}}  & \text{si } fit(w_{\text{Cross}}) < fit(\text{Position}_i)
+  \end{cases}
+  \label{eq:sel}
+\end{equation}
+
+\subsection{Pseudocódigo del LCA}
+
+\begin{algorithm}[H]
+\caption{Liver Cancer Algorithm (LCA)}
+\label{alg:lca}
+\begin{algorithmic}[1]
+\Require $N$ (tamaño de población), $T$ (iteraciones máx.), $lb$, $ub$ (límites)
+\Ensure $X_{\text{best}}$ (mejor solución encontrada)
+\State Inicializar posiciones $\{\text{Position}_i\}_{i=1}^N$ mediante ROBL (Eq.~\ref{eq:robl})
+\State Evaluar fitness de cada agente $i$
+\State Identificar $X_{\text{best}}$
+\For{$t = 1$ \textbf{to} $T$}
+  \State $\zeta \leftarrow t / T$ \Comment{tasa de mutación adaptativa}
+  \For{cada agente $i \in [1, N]$}
+    \State Calcular volumen de crecimiento $V$ y $PG = r\cdot V$ (Eqs.~\ref{eq:crec}--\ref{eq:repl})
+    \State $y \leftarrow \text{Position}_i + PG$ \Comment{crecimiento adaptativo (\textit{explotación})}
+    \State $Z \leftarrow y + S\cdot LF(D)$ \Comment{vuelo de Lévy (\textit{exploración})}
+    \State Seleccionar entre $y$ y $Z$ según fitness (Eq.~\ref{eq:update})
+    \State Aplicar mutación con tasa $\zeta$ (Eq.~\ref{eq:mut})
+    \State Aplicar cruce (Eq.~\ref{eq:cross})
+    \State Selección codiciosa (Eq.~\ref{eq:sel})
+    \State Evaluar nuevo fitness
+    \If{$fit(\text{Position}_i^{t+1}) < fit(X_{\text{best}})$}
+      \State $X_{\text{best}} \leftarrow \text{Position}_i^{t+1}$
+    \EndIf
+  \EndFor
+\EndFor
+\State \Return $X_{\text{best}}$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Nota sobre la fidelidad del pseudocódigo.}
+El pseudocódigo del Algoritmo~\ref{alg:lca} es una \textbf{reconstrucción coherente}
+elaborada a partir de las ecuaciones del artículo original (Eqs.~\ref{eq:robl}--\ref{eq:sel}),
+que constituyen la especificación matemática real del método. No reproduce literalmente el
+bloque ``Algorithm~1'' de Houssein \emph{et al.} \cite{houssein2023lca}, ya que este presenta
+varias inconsistencias formales: incluye una condición tautológica
+(\texttt{if (Position $\le 0.8$) or (Position $>0.8$)}, cierta para cualquier valor), compara
+el vector de posición $D$-dimensional con umbrales escalares ($0.8$, $1.96$) sin precisar sobre
+qué componente, y combina ramas \texttt{if}/\texttt{else if} de forma sintácticamente ambigua.
+Por ello se ha optado por la versión secuencial bien formada ---crecimiento, vuelo de Lévy,
+selección codiciosa y operadores genéticos--- que el propio texto del artículo (secciones~3.1.2
+y~3.1.3) describe y respaldan sus ecuaciones. Las diferencias entre este pseudocódigo y la
+implementación efectivamente evaluada se detallan en la Parte~II
+(\S\,\ref{sec:parte2}, ``Desviaciones respecto a la formulación original'').
+
+\subsection{Complejidad temporal}
+
+La complejidad total del LCA es $\mathcal{O}(N \cdot (T + T \cdot D + 1))$, donde $N$
+es el tamaño de la población, $T$ el número de iteraciones y $D$ la dimensión. Las tres
+fases que dominan el coste son: inicialización $\mathcal{O}(N)$, evaluación de fitness
+$\mathcal{O}(T \cdot N)$ y actualización de posiciones $\mathcal{O}(T \cdot N \cdot D)$.
+En la práctica, con $N=30$ y los límites de evaluaciones del CEC2017, este coste es perfectamente
+asumible en tiempos de ejecución razonables.
+
+\subsection{Análisis del equilibrio exploración–explotación}
+
+Uno de los criterios de evaluación más importantes de la práctica es el análisis del
+equilibrio entre \textbf{exploración} e \textbf{explotación}. La tabla siguiente sintetiza
+cómo cada componente del LCA contribuye a uno u otro aspecto:
+
+\begin{table}[h!]
+\centering
+\caption{Componentes del LCA y su rol en el equilibrio exploración–explotación}
+\label{tab:equilibrio}
+\renewcommand{\arraystretch}{1.35}
+\footnotesize
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Componente} & \textbf{Mecanismo matemático} & \textbf{Rol principal} \\
+\midrule
+ROBL (inicialización) & Eq.~\ref{eq:robl} — soluciones opuestas & Diversidad inicial \\
+Crecimiento adaptativo & Eq.~\ref{eq:crec} — volumen hemi-elipsoide & \textbf{Explotación} local \\
+Replicación exponencial & Eq.~\ref{eq:repl} — $dV/dt = r \cdot \text{Pos}$ & Transición suave \\
+Vuelo de Lévy & Eqs.~\ref{eq:levy}--\ref{eq:update} — saltos largos & \textbf{Exploración} global \\
+Mutación adaptativa & Eq.~\ref{eq:mut} — $\zeta = t/T$ crece con $t$ & Exploración $\to$ Explotación \\
+Cruce lineal & Eq.~\ref{eq:cross} — combinación de vectores & Combina ambas fases \\
+Selección codiciosa & Eq.~\ref{eq:sel} — mejor padre/hijo & Elitismo (explotación) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Discusión del equilibrio.}
+El LCA logra un balance dinámico y progresivo entre exploración y explotación a través
+del parámetro $\zeta = t/T$. Al inicio de la búsqueda ($t \approx 0$), $\zeta \approx 0$,
+por lo que la mutación actúa con poca intensidad y predomina la exploración mediante el
+vuelo de Lévy. A medida que avanza la ejecución ($t \to T$), $\zeta \to 1$ aumenta la
+tasa de mutación y cruce, intensificando la explotación en torno a las mejores regiones
+encontradas. En la formulación original, cada iteración evalúa \textbf{ambos} movimientos
+---el crecimiento local $y = \text{Position}+PG$ (explotación) y el salto de Lévy
+$Z = y + S\cdot LF$ (exploración)--- y conserva el de mejor fitness mediante selección
+codiciosa (Eq.~\ref{eq:update}), combinando así exploración y explotación en cada paso.
+Este diseño evita tanto la convergencia prematura —frecuente en algoritmos puramente
+explotadores— como la exploración excesiva sin refinar las soluciones prometedoras.
