@@ -56,7 +56,7 @@ Check each practice's `LEEME.md` or `README.md` for specific instructions.
 
 ## Author
 
-**Ismael Sallami Moreno** — Double Degree in Computer Science and Mathematics, University of Granada.
+**Ismael Sallami Moreno** — Double Degree in Computer Science and Business Administration, University of Granada.
 
 ## License
 
