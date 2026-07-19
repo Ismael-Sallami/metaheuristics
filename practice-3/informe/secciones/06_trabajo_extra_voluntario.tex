@@ -1,155 +1,170 @@
 \newpage
-\section{Trabajo Extra / Voluntario: Reinicialización Voraz (CHC/GADEGD)}
+\section{Trabajo Extra / Voluntario: ILS-ES con Reinicialización por Catástrofe (CHC/GADEGD)}
 \label{sec:extra}
 
-\subsection{Problema: Convergencia Prematura}
+\subsection{Motivación: Convergencia Prematura en ILS-ES}
 
-Uno de los mayores desafíos en optimización metaheurística es el equilibrio entre \textbf{exploración} (búsqueda en amplitud en nuevas regiones) y \textbf{explotación} (profundización en regiones prometedoras).
+Todo algoritmo de búsqueda metaheurística se enfrenta al dilema fundamental de equilibrar la
+\textbf{exploración} —búsqueda en amplitud hacia regiones inexploradas— y la \textbf{explotación}
+—profundización en regiones prometedoras ya identificadas—. En el ILS-ES estándar presentado en la
+Sección~\ref{sec:algoritmos}, el criterio de aceptación empleado es el del \emph{mejor}: únicamente se
+acepta una nueva solución si supera estrictamente a la mejor histórica.
 
-En nuestro algoritmo ILS-ES estándar, el \textbf{Criterio de Aceptación es ``el Mejor''}, es decir, que toda nueva solución candidata solo es aceptada si mejora estrictamente a la mejor solución histórica. Esto genera una \textbf{explotación extrema}: el algoritmo se comporta de forma muy \emph{codicioso} (greedy), convergiendo rápidamente hacia óptimos locales.
+Este criterio favorece una explotación muy agresiva que resulta eficaz en las primeras iteraciones,
+pero que a largo plazo provoca la \textbf{convergencia prematura}: la búsqueda acaba concentrada en
+la cuenca de atracción del primer óptimo local de calidad aceptable que halla, sin capacidad de
+escapar hacia regiones del espacio de soluciones que podrían ofrecer mejores óptimos. La diversidad
+se extingue de forma irreversible, y el algoritmo queda bloqueado.
 
-Sin embargo, a mayor plazo, este comportamiento provoca un fenómeno crítico: la \textbf{convergencia prematura}. Todas las soluciones de la población tienden a ser similares en estructura, haciendo que el algoritmo pierda capacidad de explorar nuevas regiones del espacio de búsqueda. En otras palabras:
+\subsection{Fundamento Teórico: CHC y GADEGD}
 
-\begin{itemize}
-  \item Al principio, el ``Criterio del Mejor'' es excelente: permite identificar y explotar rápidamente valles prometedores.
-  \item Pero después de varias iteraciones sin mejora, la diversidad genética se ha extinguido y el algoritmo queda \textbf{irremediablemente atrapado} en un óptimo local de baja calidad.
-\end{itemize}
+La literatura en algoritmos evolutivos propone distintos mecanismos para inyectar diversidad de
+forma controlada cuando se detecta estancamiento. En este trabajo se ha incorporado la inspiración
+de dos enfoques clásicos:
 
-\subsection{Solución: Mecanismo de Divergencia (Catástrofe)}
+\subsubsection{Algoritmo CHC (Eshelman \& Schaffer, 1993)}
 
-La teoría de \textbf{algoritmos evolutivos adaptativos} propone que la falta de diversidad es un proceso \textbf{irreversible} a menos que se fuerce una \textbf{reinicialización controlada}.
+El algoritmo \textbf{CHC} (\textit{Cross generational elitist selection, Heterogeneous recombination,
+and Cataclysmic mutation}) introduce el concepto de \emph{divergencia cataclísmica}: cuando el
+sistema detecta que ninguna solución de la población mejora durante un número determinado de
+generaciones, aplica una \textbf{macromutación extrema} sobre la mejor solución histórica, alterando
+entre el 35\% y el 50\% de sus componentes. Esta perturbación masiva fuerza al algoritmo a saltar a
+una cuenca de atracción completamente distinta y retomar la exploración desde una posición
+geográficamente alejada del óptimo local previo.
 
-\subsubsection{Inspiración en CHC}
-
-El algoritmo clásico \textbf{CHC} (\textit{Cross generational elitist selection, Heterogeneous recombination, and Cataclysmic mutation}, Eshelman \& Schaffer, 1993) soluciona este problema mediante el siguiente mecanismo:
-
-\begin{enumerate}
-  \item \textbf{Monitoreo de estancamiento}: Se cuenta el número de generaciones consecutivas en las que la población NO mejora su fitness global.
-  \item \textbf{Detección del umbral}: Si el contador supera un límite predefinido (e.g., 5-10 generaciones), se asume que la búsqueda está condenada en el valle actual.
-  \item \textbf{Fase de Divergencia (Catástrofe)}: En lugar de continuar con mutación suave, CHC aplica una \textbf{macromutación extrema} a la mejor solución histórica, alterando entre el 35\% y el 50\% de sus variables. Esta ``catástrofe'' obliga la búsqueda a saltar a un valle completamente diferente.
-  \item \textbf{Reinicio del contador}: Si se consigue mejorar desde esta nueva región, el contador de estancamiento se resetea a cero.
+El mecanismo CHC se estructura en cuatro fases:
+\begin{enumerate}[noitemsep]
+  \item \textbf{Monitorización del estancamiento:} se cuenta el número de iteraciones consecutivas
+  sin mejora de la mejor solución global.
+  \item \textbf{Detección del umbral:} si el contador supera el límite $\texttt{it}_0$
+  (configurable; valor por defecto 10), se considera que el algoritmo está estancado.
+  \item \textbf{Fase de divergencia (catástrofe):} en lugar de aplicar la mutación estándar del
+  20\%, se aplica una macromutación del 40\% sobre el campeón histórico.
+  \item \textbf{Reinicio del contador:} si desde la nueva región se logra mejora, el contador se
+  resetea a cero y se retoma la intensificación normal.
 \end{enumerate}
 
-\subsubsection{Refinamiento Moderno: GADEGD}
+\subsubsection{Refinamiento GADEGD (Diversificación Voraz)}
 
-El algoritmo \textbf{GADEGD} (propuesto en esta asignatura) va un paso más allá y propone que la reinicialización no sea \emph{a ciegas}. En lugar de aplicar una macromutación aleatoria, GADEGD inyecta una solución nueva construida mediante un \textbf{procedimiento Voraz Aleatorizado}:
+El modelo \textbf{GADEGD} va un paso más allá y propone que la reinicialización no se realice a
+ciegas. En lugar de aplicar una macromutación aleatoria, el algoritmo inyecta una solución nueva
+construida mediante un \textbf{procedimiento Greedy Aleatorizado}: se seleccionan activos con
+preferencia por los de mayor rentabilidad histórica, añadiendo aleatoriedad para inducir diversidad.
+Así, la reinicialización no destruye el conocimiento heurístico acumulado, sino que lo combina con
+exploración.
 
-\begin{itemize}
-  \item Se genera una solución completamente nueva usando heurística \textit{Greedy} con aleatoriedad (por ejemplo, para carteras: seleccionar activos de forma aleatoria pero con preferencia por aquellos con mayor rentabilidad histórica).
-  \item De este modo, la ``reinicialización voraz'' garantiza que el algoritmo salta a una región inexplorada, pero SIN perder el \textbf{conocimiento heurístico} acumulado.
-  \item El resultado es mejor que una mutación ciega: combina la robustez de CHC con la calidad de soluciones greedy.
-\end{itemize}
+En la implementación de esta práctica se ha optado por la \textbf{Opción A (CHC)}: macromutación
+sobre el campeón histórico con tasa del 40\%. La Opción B (GADEGD) queda disponible en el código
+fuente pero desactivada por defecto, ya que la Opción A presenta mejor equilibrio entre coste
+computacional y calidad en los mercados evaluados.
 
-\subsection{Integración en ILS-ES: ILS-ES + Reinicialización Voraz}
+\subsection{Diseño e Integración en ILS-ES}
 
-Hemos integrado este mecanismo en nuestro ILS-ES mediante los siguientes pasos:
+\subsubsection{Componentes Adicionales}
 
-\subsubsection{Parámetros Adicionales}
+La variante ILS-ES+CHC extiende el ILS-ES estándar con los siguientes parámetros adicionales:
 
-\begin{itemize}
-  \item \textbf{\texttt{m\_limite\_estancamiento}}: Número máximo de iteraciones (arranques del ES) sin mejora antes de activar la divergencia. Por defecto: 10.
-  \item \textbf{\texttt{m\_mutation\_rate\_normal}}: Tasa de mutación estándar para ILS: 0.20 (20\% de variables modificadas).
-  \item \textbf{\texttt{m\_mutation\_rate\_macro}}: Tasa de macromutación para la fase de divergencia: 0.40-0.50 (40-50\% de variables).
+\begin{itemize}[noitemsep]
+  \item \textbf{\texttt{limit\_stagnation}}: número máximo de iteraciones consecutivas sin mejora
+  antes de activar la divergencia. Valor: 10.
+  \item \textbf{Tasa de mutación estándar}: 20\% (idéntica al ILS-ES base).
+  \item \textbf{Tasa de macromutación}: 40\% (divergencia CHC).
 \end{itemize}
 
 \subsubsection{Pseudocódigo}
 
-A continuación se presenta el pseudocódigo del nuevo algoritmo \textbf{ILS-ES con Reinicialización Voraz}:
-
 \begin{algorithm}[H]
 \SetAlgoLined
-\caption{ILS-ES con Reinicialización Voraz (CHC/GADEGD)}
-\label{alg:ilses_chc}
-\KwIn{problema, $MAX\_EVALS$}
-\KwOut{Mejor solucion encontrada}
-$S_{actual} \leftarrow GenerarSolucionAleatoria()$\;
-$S_{actual} \leftarrow EnfriamientoSimulado(S_{actual})$\; \tcp{Optimizacion inicial}
-$S_{mejor} \leftarrow S_{actual}$\;
-$iteraciones\_sin\_mejora \leftarrow 0$\;
-$LIMITE\_ESTANCAMIENTO \leftarrow 10$\;
+\KwIn{Problema $P$, parámetros ES, $\texttt{limit\_stagnation}=10$}
+\KwOut{Mejor solución encontrada}
 
-\While{$EVALUACIONES\_TOTALES < MAX\_EVALS$}{
-  \If{$iteraciones\_sin\_mejora \ge LIMITE\_ESTANCAMIENTO$}{
-    \tcp{Fase de divergencia (CHC)}
-    $S_{mutada} \leftarrow AplicarMacromutacion(S_{mejor}, 0.40)$\;
-    \tcp{Muta 40\% de variables}
-    $iteraciones\_sin\_mejora \leftarrow 0$\;
-  }\Else{
-    \tcp{Fase de intensificacion (ILS estandar)}
-    $S_{mutada} \leftarrow AplicarMutacion(S_{mejor}, 0.20)$\;
-    \tcp{Muta 20\% de variables}
+$S \leftarrow$ Generar-Solución-Aleatoria()\;
+$Best \leftarrow$ Enfriamiento-Simulado($S$, parámetros\_ES)\;
+$ctr\_estanc \leftarrow 0$\;
+
+\While{quepan evaluaciones}{
+  \eIf{$ctr\_estanc \geq \texttt{limit\_stagnation}$}{
+    \tcp{Fase de divergencia (CHC): macromutación del 40\%}
+    $S' \leftarrow$ Macromutar($Best$, $0.40$)\;
+    $ctr\_estanc \leftarrow 0$\;
+  }{
+    \tcp{Fase de intensificación (ILS estándar): mutación del 20\%}
+    $S' \leftarrow$ Mutar($Best$, $0.20$)\;
   }
-
-  Reparar($S_{mutada}$)\; \tcp{Garantiza factibilidad}
-  $S_{optimizada} \leftarrow EnfriamientoSimulado(S_{mutada})$\; \tcp{Explotacion local profunda}
-
-  \If{$Coste(S_{optimizada}) > Coste(S_{mejor})$}{
-    $S_{mejor} \leftarrow S_{optimizada}$\;
-    $iteraciones\_sin\_mejora \leftarrow 0$\;
-  }\Else{
-    $iteraciones\_sin\_mejora \leftarrow iteraciones\_sin\_mejora + 1$\;
+  Reparar($S'$)\;
+  $S'' \leftarrow$ Enfriamiento-Simulado($S'$, parámetros\_ES)\;
+  \eIf{$f(S'') > f(Best)$}{
+    $Best \leftarrow S''$\;
+    $ctr\_estanc \leftarrow 0$\;
+  }{
+    $ctr\_estanc \leftarrow ctr\_estanc + 1$\;
   }
 }
-
-\Return $S_{mejor}$\;
+\Return $Best$\;
+\caption{ILS-ES con Reinicialización por Catástrofe (CHC/GADEGD)}
+\label{alg:ilses_chc}
 \end{algorithm}
+
+La diferencia clave respecto al ILS-ES estándar (Algoritmo~\ref{alg:ils-es}) radica en el bloque
+condicional que, en función del contador de estancamiento, elige entre aplicar la perturbación
+habitual o la macromutación de catástrofe. El operador Reparar garantiza la factibilidad de la
+solución mutada, al igual que en el ILS-ES base.
 
 \subsection{Resultados Experimentales}
 
-A continuación se presentan los resultados comparativos entre \textbf{ILS-ES} estándar e \textbf{ILS-ES + Reinicialización Voraz (CHC)}.
+A continuación se presentan los resultados comparativos entre el ILS-ES estándar y el
+ILS-ES+CHC, obtenidos bajo las mismas condiciones experimentales de la Sección~\ref{sec:experimentos}
+(50 ejecuciones independientes, semilla base 42, hasta 10\,000 evaluaciones).
 
-\subsubsection{Tabla Comparativa: IBEX 35}
+\subsubsection*{IBEX 35 ($n=30$)}
 
 \begin{table}[H]
 \centering
-\caption{Comparación ILS-ES vs ILS-ES+CHC en IBEX 35 (n=30)}
+\caption{Comparación ILS-ES vs.\ ILS-ES+CHC -- IBEX 35}
 \label{tab:results_ilses_chc_ibex}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lccccc}
 \hline
 Algoritmo & Fitness(2015--2024) & Fitness(2025) & Std & Evaluaciones & Tiempo (s) \\
 \hline
-ILS-ES & -4.6494 & -3.1271 & 0.0141 & 3130 & 0.003 \\
-ILS-ES+CHC & -4.6472 & -3.1293 & 0.0075 & 8591 & 0.008 \\
-Mejora & +0.0022 & -0.0022 & -0.0066 & +5461 & +0.005 \\
+ILS-ES      & -4.649 & -3.127 & 0.014 & 3130 & 0.003 \\
+ILS-ES+CHC  & -4.647 & -3.129 & 0.008 & 8591 & 0.008 \\
 \hline
 \end{tabular}
 }
 \end{table}
 
-\subsubsection{Tabla Comparativa: S\&P 100}
+\subsubsection*{S\&P 100 ($n=97$)}
 
 \begin{table}[H]
 \centering
-\caption{Comparación ILS-ES vs ILS-ES+CHC en S\&P 100 (n=97)}
+\caption{Comparación ILS-ES vs.\ ILS-ES+CHC -- S\&P 100}
 \label{tab:results_ilses_chc_sp100}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lccccc}
 \hline
 Algoritmo & Fitness(2015--2024) & Fitness(2025) & Std & Evaluaciones & Tiempo (s) \\
 \hline
-ILS-ES & -3.3113 & -3.9909 & 0.0382 & 2863 & 0.023 \\
-ILS-ES+CHC & -3.2973 & -3.9838 & 0.0278 & 6507 & 0.056 \\
-Mejora & +0.0140 & +0.0071 & -0.0104 & +3644 & +0.033 \\
+ILS-ES      & -3.311 & -3.991 & 0.038 & 2863 & 0.023 \\
+ILS-ES+CHC  & -3.297 & -3.984 & 0.028 & 6507 & 0.056 \\
 \hline
 \end{tabular}
 }
 \end{table}
 
-\subsubsection{Tabla Comparativa: S\&P 500}
+\subsubsection*{S\&P 500 ($n=457$)}
 
 \begin{table}[H]
 \centering
-\caption{Comparación ILS-ES vs ILS-ES+CHC en S\&P 500 (n=457)}
+\caption{Comparación ILS-ES vs.\ ILS-ES+CHC -- S\&P 500}
 \label{tab:results_ilses_chc_sp500}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lccccc}
 \hline
 Algoritmo & Fitness(2015--2024) & Fitness(2025) & Std & Evaluaciones & Tiempo (s) \\
 \hline
-ILS-ES & -4.0350 & -4.7611 & 0.0920 & 546 & 0.026 \\
-ILS-ES+CHC & -4.0070 & -4.7107 & 0.0933 & 769 & 0.039 \\
-Mejora & +0.0280 & +0.0504 & +0.0013 & +223 & +0.013 \\
+ILS-ES      & -4.035 & -4.761 & 0.092 & 546 & 0.026 \\
+ILS-ES+CHC  & -4.007 & -4.711 & 0.093 & 769 & 0.039 \\
 \hline
 \end{tabular}
 }
@@ -157,126 +172,86 @@ Mejora & +0.0280 & +0.0504 & +0.0013 & +223 & +0.013 \\
 
 \subsection{Análisis de Dispersión (Boxplots)}
 
-La Figura~\ref{fig:boxplot_ilses_chc} resume la distribución de fitness de ILS-ES e ILS-ES+CHC, permitiendo visualizar la robustez y la variabilidad en cada mercado:
-
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{\detokenize{figuras/boxplot_comparativo_ilses_chc.png}}
-  \caption[Boxplots comparativos: ILS-ES vs ILS-ES+CHC]{Distribución de fitness en entrenamiento para ILS-ES (izquierda) e ILS-ES+CHC (derecha) en IBEX 35, S\&P 100 y S\&P 500.}
+  \caption{Distribución de fitness en entrenamiento (2015--2024) para ILS-ES (izquierda) e
+  ILS-ES+CHC (derecha) en los tres mercados.}
   \label{fig:boxplot_ilses_chc}
 \end{figure}
 
-\subsection{Análisis de Resultados y Conclusiones}
+\subsection{Análisis de Resultados}
 
-\subsubsection{Observaciones por Mercado}
+\subsubsection*{IBEX 35 ($n=30$): diversidad sin ventaja de fitness}
 
-\paragraph{IBEX 35 (n=30):} 
-En el mercado más pequeño (30 activos), el mecanismo de reinicialización CHC muestra resultados mixtos:
-\begin{itemize}
-  \item \textbf{Estabilidad mejorada}: La desviación estándar se reduce significativamente de 0.0141 a 0.0075 (47\% de reducción).
-  \item \textbf{Presupuesto incrementado}: El algoritmo consume 2.7× más evaluaciones (3130 vs 8591), explorando más el espacio de búsqueda.
-  \item \textbf{Fitness de validación ligeramente peor}: En 2025, ILS-ES+CHC obtiene -3.1293 vs -3.1271 de ILS-ES estándar.
-  \item \textbf{Conclusión}: En problemas pequeños, la diversidad inyectada por CHC puede no ser necesaria si ILS-ES ya converge rápidamente. El costo en evaluaciones no se compensa con mejora de calidad.
-\end{itemize}
+En el mercado más pequeño, el mecanismo de catástrofe CHC logra reducir la desviación estándar de
+forma notable (de 0.014 a 0.008, un 47\% de reducción), reflejando mayor consistencia entre
+ejecuciones. Sin embargo, el fitness de validación en 2025 es marginalmente peor (-3.129 frente a
+-3.127 de ILS-ES). Este comportamiento es coherente con la teoría: en espacios de baja dimensión
+con pocos activos, el ILS-ES ya converge con suficiente rapidez hacia óptimos de buena calidad, y
+la macromutación del 40\% puede destruir estructuras parcialmente buenas sin compensar en el
+presupuesto disponible. El coste en evaluaciones (2.7$\times$ más) tampoco se justifica aquí.
 
-\paragraph{S\&P 100 (n=97):}
-En el mercado intermedio, CHC demuestra mayor efectividad:
-\begin{itemize}
-  \item \textbf{Mejora en ambas métricas}: Fitness de entrenamiento mejora (+0.0140), fitness de validación mejora (+0.0071).
-  \item \textbf{Reducción de variabilidad}: Std baja de 0.0382 a 0.0278 (27\% de reducción).
-  \item \textbf{Presupuesto equilibrado}: Usa 2.3× más evaluaciones, con mejoras tangibles.
-  \item \textbf{Conclusión}: Este es el punto óptimo para CHC. La inyección de diversidad mediante divergencia encuentra nuevos óptimos locales sin la sobre-explotación del ILS-ES estándar.
-\end{itemize}
+\subsubsection*{S\&P 100 ($n=97$): punto de equilibrio óptimo}
 
-\paragraph{S\&P 500 (n=457):}
-En el problema más grande, CHC obtiene su mejor desempeño relativo:
-\begin{itemize}
-  \item \textbf{Mejora sustancial en entrenamiento}: +0.0280 (+0.69\% en valor absoluto).
-  \item \textbf{Mejora en validación}: +0.0504 (+1.06\% en valor absoluto).
-  \item \textbf{Variabilidad similar}: La diversidad ayuda sin aumentar inestabilidad.
-  \item \textbf{Evaluaciones moderadas}: Solo 41\% más evaluaciones (546 → 769).
-  \item \textbf{Conclusión}: En espacios de búsqueda grandes y complejos (457 dimensiones), el mecanismo de catástrofe de CHC es altamente efectivo. La reinicialización voraz escapa de óptimos locales pobres de forma estratégica.
-\end{itemize}
+En el mercado de dimensión intermedia, ILS-ES+CHC mejora simultáneamente el fitness de
+entrenamiento (+0.014) y el de validación (+0.007), al tiempo que reduce la variabilidad (Std
+de 0.038 a 0.028, un 27\%). Este es el escenario donde el mecanismo de divergencia resulta más
+efectivo: el espacio de búsqueda es suficientemente grande como para que el ILS-ES estándar quede
+atrapado en cuencas subóptimas, pero la macromutación consigue redirigir la trayectoria hacia
+regiones genuinamente distintas antes de que se agote el presupuesto.
 
-\subsubsection{Interpretación de la Reducción de Variabilidad}
+\subsubsection*{S\&P 500 ($n=457$): mayor beneficio relativo en alta dimensión}
 
-Uno de los hallazgos más importantes es la \textbf{reducción consistente de la desviación estándar} en ILS-ES+CHC:
+En el problema de mayor dimensión, ILS-ES+CHC obtiene su mejor mejora relativa: +0.028 en
+entrenamiento y +0.050 en validación (un 1.06\% en valor absoluto). Resulta especialmente
+significativo que este beneficio se consiga con un incremento moderado de evaluaciones (solo el
+41\% más: de 546 a 769), lo que indica una alta eficiencia de la divergencia por catástrofe en
+espacios de alta dimensionalidad. La desviación estándar permanece prácticamente estable (0.092
+frente a 0.093), sugiriendo que la macromutación no introduce inestabilidad adicional.
 
-\begin{equation}
-\text{Mejora de Robustez} = \frac{\sigma_{\text{ILS-ES}} - \sigma_{\text{CHC}}}{\sigma_{\text{ILS-ES}}} \times 100\%
-\end{equation}
+\subsubsection*{Interpretación del mecanismo de divergencia}
 
-\begin{center}
-\begin{tabular}{lr}
-\hline
-Mercado & Mejora de Robustez \\
-\hline
-IBEX 35 & 46.8\% \\
-S\&P 100 & 27.2\% \\
-S\&P 500 & -1.4\% \\
-\hline
-\end{tabular}
-\end{center}
-
-Esta tendencia sugiere que el mecanismo de divergencia establece un \textbf{``piso de calidad garantizado''}. Incluso en peor caso (ejecución desafortunada), ILS-ES+CHC mantiene soluciones de mejor calidad gracias a la exploración forzada.
-
-\subsubsection{Relación Evaluaciones-Mejora}
-
-Definimos la \textbf{eficiencia de convergencia} como:
+Los resultados muestran un patrón claro que crece con la dimensión del problema. Definiendo la
+eficiencia de convergencia como la mejora de fitness en validación por evaluación adicional empleada:
 
 \begin{equation}
-\text{Eficiencia} = \frac{\Delta \text{Fitness}}{\Delta \text{Evals}} = \frac{f_{\text{CHC}} - f_{\text{ILS-ES}}}{\text{Evals}_{\text{CHC}} - \text{Evals}_{\text{ILS-ES}}}
+\text{Eficiencia} = \frac{\Delta f_{\text{2025}}}{\Delta \text{Evals}} =
+\frac{f_{\text{CHC}} - f_{\text{ILS-ES}}}{\text{Evals}_{\text{CHC}} - \text{Evals}_{\text{ILS-ES}}}
 \end{equation}
 
 \begin{center}
 \begin{tabular}{lrr}
 \hline
-Mercado & $\Delta$ Fitness 2025 & Eficiencia \\
+Mercado  & $\Delta f_{\text{2025}}$ & Eficiencia \\
 \hline
-IBEX 35 & -0.0022 & -0.00000040 \\
-S\&P 100 & +0.0071 & +0.00000195 \\
-S\&P 500 & +0.0504 & +0.00022619 \\
+IBEX 35  & $-0.002$ & $-4.0 \times 10^{-7}$ \\
+S\&P 100 & $+0.007$ & $+1.9 \times 10^{-6}$ \\
+S\&P 500 & $+0.050$ & $+2.3 \times 10^{-4}$ \\
 \hline
 \end{tabular}
 \end{center}
 
-S\&P 500 demuestra la mejor eficiencia, sugiriendo que en espacios de alta dimensionalidad, los beneficios de CHC justifican plenamente el costo en evaluaciones.
+La eficiencia crece varios órdenes de magnitud al aumentar la dimensión, confirmando que el
+mecanismo CHC está especialmente indicado en problemas de alta dimensionalidad donde el ILS-ES
+estándar tiende a la convergencia prematura.
 
-\subsubsection{Conclusiones Generales}
+Otro hallazgo relevante es la \textbf{reducción consistente de la desviación estándar} en IBEX 35
+y S\&P 100, que sugiere que el mecanismo de divergencia actúa como un \emph{piso de calidad}:
+incluso en las ejecuciones menos afortunadas, el reinicio forzado rescata al algoritmo de los
+óptimos locales más pobres.
 
-\begin{enumerate}
-  \item \textbf{Tamaño del Problema Importa}: CHC/GADEGD es más efectivo en problemas grandes ($n > 100$). En espacios pequeños, la complejidad añadida no compensa.
-  
-  \item \textbf{Robustez Garantizada}: Independientemente de la mejora en fitness, ILS-ES+CHC reduce consistentemente la variabilidad, lo que es valioso en aplicaciones prácticas donde la predictibilidad es crítica.
-  
-  \item \textbf{Equilibrio Exploración-Explotación}: El mecanismo de divergencia logra un balance más fino que el ILS-ES estándar, especialmente evidente en S\&P 500.
-  
-  \item \textbf{Implementación Viable}: El costo computacional es razonable (típicamente $2-3\times$ más evals), y es amortizable en problemas de optimización en tiempo real donde se ejecuta una única vez.
-  
-  \item \textbf{Recomendación Práctica}: Para aplicaciones de optimización de carteras con más de ~100 activos, se recomienda usar ILS-ES+CHC. Para problemas pequeños ($n < 50$), ILS-ES estándar es más económico sin pérdida significativa de calidad.
+\subsubsection*{Conclusiones}
+
+\begin{enumerate}[noitemsep]
+  \item \textbf{Beneficio creciente con la dimensión:} el mecanismo CHC es más eficaz conforme
+  aumenta el número de activos. Para $n < 50$, ILS-ES estándar resulta más económico sin pérdida
+  significativa de calidad; para $n > 100$, ILS-ES+CHC es recomendable.
+  \item \textbf{Mayor robustez:} la desviación estándar se reduce en todos los mercados excepto
+  S\&P 500, donde permanece estable. El algoritmo es más predecible en la práctica.
+  \item \textbf{Equilibrio exploración--explotación mejorado:} el contador de estancamiento permite
+  al algoritmo alternar de forma adaptativa entre intensificación (ILS normal) y diversificación
+  (catástrofe CHC), en lugar de comprometerse permanentemente con una sola estrategia.
+  \item \textbf{Coste computacional razonable:} el incremento en evaluaciones es de 2--3$\times$ en
+  dimensiones bajas y solo del 41\% en S\&P 500, donde el beneficio es mayor.
 \end{enumerate}
-
-\subsection{Validación Experimental y Reproducibilidad}
-
-El código fuente de ILSES\_CHC está disponible en:
-\begin{itemize}
-  \item Header: \texttt{\detokenize{code/inc/ils_es_chc.h}}
-  \item Implementación: \texttt{\detokenize{code/src/ils_es_chc.cpp}}
-  \item Script de análisis: \texttt{\detokenize{EXTRA/boxplot_comparativo.py}}
-\end{itemize}
-
-Todos los experimentos utilizan:
-\begin{itemize}
-  \item Seed reproducible: \texttt{42}
-  \item 50 ejecuciones independientes por algoritmo
-  \item Presupuesto de evaluaciones: 10,000
-  \item Periodo de entrenamiento: 2015-2024
-  \item Periodo de validación: 2025
-\end{itemize}
-
-Los datos están disponibles en:
-\begin{itemize}
-  \item \texttt{\detokenize{code/IBEX_35_results.csv}}
-  \item \texttt{\detokenize{code/S&P_100_results.csv}}
-  \item \texttt{\detokenize{code/S&P_500_results.csv}}
-\end{itemize}

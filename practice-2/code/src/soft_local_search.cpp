@@ -80,8 +80,10 @@ int apply_soft_local_search(
         }
 
         const double transfer = solution[i] * ratio;
-        const double new_i = solution[i] - transfer;
-        const double new_j = solution[j] + transfer;
+        const double old_val_i = solution[i];
+        const double old_val_j = solution[j];
+        const double new_i = old_val_i - transfer;
+        const double new_j = old_val_j + transfer;
 
         const bool valid_i = (new_i < 1e-8) || (new_i >= lo && new_i <= hi);
         const bool valid_j = (new_j < 1e-8) || (new_j >= lo && new_j <= hi);
@@ -89,17 +91,20 @@ int apply_soft_local_search(
             continue;
         }
 
-        auto neighbor = solution;
-        neighbor[i] = (new_i < 1e-8) ? 0.0 : new_i;
-        neighbor[j] = (new_j < 1e-8) ? 0.0 : new_j;
+        // Apply transfer in-place to avoid vector allocation
+        solution[i] = (new_i < 1e-8) ? 0.0 : new_i;
+        solution[j] = (new_j < 1e-8) ? 0.0 : new_j;
 
-        const tFitness nfit = problem.fitness(neighbor);
+        const tFitness nfit = problem.fitness(solution);
         ++evals;
 
         if (nfit > fitness) {
-            solution = std::move(neighbor);
             fitness = nfit;
             inspected_since_improvement = 0;
+        } else {
+            // Restore state
+            solution[i] = old_val_i;
+            solution[j] = old_val_j;
         }
     }
 

@@ -34,28 +34,25 @@ bool PortfolioProblem::isValid(const tSolution<double> &solution) {
     return true;
 }
 
-// For fitness we know it is benefit - lambda * risk, since the benefit uses logarithms, we calculate it in the problem class for efficiency reasons
+// Fitness = benefit - lambda * risk. From practice 2 onwards the risk term is the
+// portfolio standard deviation (sqrt of the quadratic form), so we mirror that here
+// to keep the comparison with the practice 1-3 algorithms on the same scale.
 
 tFitness PortfolioProblem::fitness(const tSolution<double> &solution) {
-    double risk = 0.0;
-    double profit = 0.0;
-    const size_t n = solution.size();
+    double riesgo = 0.0;
+    double beneficio = 0.0;
 
-    // Optimize: only consider non-zero weights for profit and risk.
-    // This reduces the complexity from O(n^2) to O(k^2) where k is the number of active assets.
-    for (size_t i = 0; i < n; ++i) {
-        if (solution[i] == 0.0) continue;
-        
-        profit += solution[i] * m_data.logBenefits[i];
-        
-        for (size_t j = 0; j < n; ++j) {
-            if (solution[j] == 0.0) continue;
-            risk += solution[i] * solution[j] * m_data.covariance[i][j];
+    for (size_t i = 0; i < solution.size(); ++i) {
+        beneficio += solution[i] * m_data.logBenefits[i];
+    }
+
+    for (size_t i = 0; i < solution.size(); ++i) {
+        for (size_t j = 0; j < solution.size(); ++j) {
+            riesgo += solution[i] * solution[j] * m_data.covariance[i][j];
         }
     }
 
-    // in the pr2 the risk term is the portfolio standard deviation
-    return profit - m_lambda * sqrt(std::max(risk, 0.0)); // We use max to avoid negative values due to numerical issues
+    return beneficio - (m_lambda * std::sqrt(std::max(riesgo, 0.0)));
 }
 
 tSolution<double> PortfolioProblem::createSolution() {
@@ -186,25 +183,25 @@ void PortfolioProblem::fix(tSolution<double> &solution) {
 }
 
 double PortfolioProblem::getGreedyHeuristic(int companyIndex) {
-    double profit = m_data.logBenefits[companyIndex]; 
+    double beneficio = m_data.logBenefits[companyIndex]; 
     
-    double covariance_sum = 0.0;
+    double suma_covarianzas = 0.0;
     size_t n = getSolutionSize();
     for (size_t j = 0; j < n; ++j) {
-        covariance_sum += m_data.covariance[companyIndex][j];
+        suma_covarianzas += m_data.covariance[companyIndex][j];
     }
     
-    double heuristic = profit - (m_lambda * sqrt(std::max(covariance_sum, 0.0))); 
+    double heuristica = beneficio - (m_lambda * (suma_covarianzas / m_data.numDays)); 
     
-    return heuristic;
+    return heuristica;
 }
 
-double PortfolioProblem::getProfit(const tSolution<double> &solution) {
-    double profit = 0.0;
+double PortfolioProblem::getBeneficio(const tSolution<double> &solution) {
+    double beneficio = 0.0;
 
     for (size_t i = 0; i < solution.size(); ++i) {
-        profit += solution[i] * m_data.logBenefits[i];
+        beneficio += solution[i] * m_data.logBenefits[i];
     }
 
-    return profit;
+    return beneficio;
 }

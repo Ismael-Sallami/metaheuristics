@@ -1,7 +1,7 @@
 \section{Aplicación de los Algoritmos al Problema de Portfolio}
 \label{sec:aplicacion}
 
-En este apartado se recogen los elementos comunes a todos los algoritmos empleados en la práctica. La idea es fijar primero cómo se representa una solución, cómo se evalúa y cómo se mantiene la factibilidad; después se describen los operadores compartidos de selección, cruce y mutación.
+En este apartado se recogen los elementos comunes a todos los algoritmos empleados en la práctica. La idea es fijar primero cómo se representa una solución, cómo se evalúa y cómo se mantiene la factibilidad; después se describen los operadores compartidos de vecindad, reparación y perturbación.
 
 \subsection{Esquema de representación}
 Se utiliza una \textbf{representación real} basada en un vector de pesos
@@ -15,6 +15,32 @@ donde cada componente $s_i$ indica la fracción del capital invertida en el acti
 \end{itemize}
 
 La población inicial se genera aleatoriamente y, a continuación, se aplica reparación para garantizar que todos los individuos parten de soluciones válidas.
+
+\subsection{Generación de Solución Aleatoria}
+El proceso de generación de la solución inicial crea una cartera válida asignando pesos aleatorios dentro de los límites permitidos, asegurando que la suma sea exactamente 1.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Tamaño $N$, límites $lo$, $hi$}
+\KwOut{Solución inicial aleatoria factible $S$}
+
+\tcp{Fase 1: asignar pesos aleatorios a todos los activos}
+\For{$i \leftarrow 1$ \KwTo $N$}{
+    $s_i \leftarrow$ valor aleatorio uniforme en $[lo, hi]$\;
+}
+\tcp{Fase 2: eliminar aleatoriamente entre 1 y N-1 activos (cartera sparse)}
+$num\_ceros \leftarrow$ entero aleatorio en $[1, N-1]$\;
+\While{$num\_ceros > 0$}{
+    Elegir posición $pos$ aleatoria tal que $s_{pos} \neq 0$\;
+    $s_{pos} \leftarrow 0$\;
+    $num\_ceros \leftarrow num\_ceros - 1$\;
+}
+\tcp{Fase 3: reparar para garantizar factibilidad (suma=1 y límites)}
+$S \leftarrow$ Reparar($S$)\;
+\Return $S$\;
+\caption{Generación de Solución Aleatoria}
+\label{alg:gen-aleatoria}
+\end{algorithm}
 
 \subsection{Función objetivo}
 La calidad de una cartera se mide con una función de \textit{fitness} que combina beneficio y riesgo. Como en el problema se busca maximizar, una mayor aptitud indica una mejor solución\footnote{El cambio que se ha introducido es que se ha realizado la raíz para el cálculo del riesgo.}.
@@ -101,16 +127,19 @@ Tanto la Búsqueda Local (BL) como el Enfriamiento Simulado (ES) utilizan el mis
 \begin{algorithm}[H]
 \SetAlgoLined
 \KwIn{Solución $S$, ratio de transferencia $r=0.4$}
-\KwOut{Solución vecina $S'$}
+\KwOut{Solución vecina $S'$ o rechazo del movimiento}
 
-Seleccionar aleatoriamente un par de activos distintos $(i, j)$ de la cartera\;
+Seleccionar aleatoriamente un par de activos distintos $(i, j)$\;
 \If{$s_i > 0$}{
     $transferencia \leftarrow s_i \cdot r$\;
     $s'_i \leftarrow s_i - transferencia$\;
     $s'_j \leftarrow s_j + transferencia$\;
-    Reparar solución para asegurar límites $[lo, hi]$\;
+    \eIf{$s'_i \in \{0\} \cup [lo,hi]$ \textbf{y} $s'_j \in \{0\} \cup [lo,hi]$}{
+        \Return $S'$ \tcp*{Movimiento válido}
+    }{
+        \Return $S$ \tcp*{Movimiento inválido: se rechaza, no se repara}
+    }
 }
-\Return $S'$\;
 \caption{Operador de vecindad por transferencia}
 \end{algorithm}
 

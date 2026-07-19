@@ -15,6 +15,7 @@ movimientos que empeoran la solución con una probabilidad decreciente.
     \item \textbf{Temperatura Inicial ($T_0$):} Calculada para permitir un empeoramiento 
     relativo inicial $\mu=0.2$ con probabilidad $\phi=0.3$.
     \item \textbf{C\'{a}lculo de $T_0$:} Se usa $|f(S_0)|$ para evitar temperaturas negativas, ya que el fitness es negativo.
+    \item \textbf{Verificación:} Se comprueba que $T_0 > T_f$; si no se cumple, se devuelve la solución inicial directamente.
     \item \textbf{Esquema de Enfriamiento:} Cauchy modificado $T_{k+1} = \frac{T_k}{1 + \beta \cdot T_k}$.
     \item \textbf{Factor $\beta$:} Calculado para realizar exactamente $M$ enfriamientos, 
     donde $M = \text{EvaluacionesTotales} / \text{L(T)}$.
@@ -29,21 +30,25 @@ movimientos que empeoran la solución con una probabilidad decreciente.
 
 $S \leftarrow$ Generar-Solución-Aleatoria()\;
 $T_0 \leftarrow \frac{\mu \cdot |f(S)|}{-\ln(\phi)}$\;
+\If{$T_0 \leq T_f$}{\Return $S$ \tcp*{Caso degenerado: no hay margen de enfriamiento}}
 $T \leftarrow T_0$\;
+$M \leftarrow maxevals / max\_vecinos$\;
+$\beta \leftarrow (T_0 - T_f) / (M \cdot T_0 \cdot T_f)$\;
 $Best \leftarrow S$\;
 
 \While{$T > T_f$ \textbf{and} n\_exitos $> 0$ \textbf{and} quepan evaluaciones}{
     n\_exitos $\leftarrow 0$\;
     n\_vecinos $\leftarrow 0$\;
-    \While{n\_vecinos $< max\_vecinos$ \textbf{and} n\_exitos $< max\_exitos$}{
+    \While{n\_vecinos $<$ max\_vecinos \textbf{and} n\_exitos $<$ max\_exitos \textbf{and} quepan evaluaciones}{
+        n\_vecinos $\leftarrow$ n\_vecinos $+ 1$\;
         $S' \leftarrow$ Generar-Vecino-Aleatorio($S$)\;
-        $\Delta f \leftarrow f(S) - f(S')$ \tcp*{Maximización}
+        \If{vecino inválido}{\textbf{continue}\;}
+        $\Delta f \leftarrow f(S) - f(S')$ \tcp*{Maximización: $\Delta f < 0 \Rightarrow$ mejora}
         \If{$\Delta f < 0$ \textbf{or} $U(0,1) \leq \exp(-\Delta f / T)$}{
             $S \leftarrow S'$\;
-            n\_exitos $\leftarrow n\_exitos + 1$\;
+            n\_exitos $\leftarrow$ n\_exitos $+ 1$\;
             \If{$f(S) > f(Best)$}{$Best \leftarrow S$\;}
         }
-        n\_vecinos $\leftarrow n\_vecinos + 1$\;
     }
     $T \leftarrow \frac{T}{1 + \beta \cdot T}$\;
 }

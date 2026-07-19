@@ -1,56 +1,63 @@
 # MH-Practices
 
-Repositorio de prácticas de **Metaheurísticas (MH)**.
+Practices for the **Metaheuristics (MH)** course — University of Granada, 2025-26.
 
-Este README documenta el estado actual del repositorio y se irá ampliando conforme se añadan nuevas prácticas, mejoras y resultados.
+## Practices
 
-## Estado actual
+| # | Folder | Topic | Algorithms |
+|---|--------|-------|------------|
+| 1 | `practice-1/` | Portfolio optimization (Markowitz) | Greedy, Local Search |
+| 2 | `practice-2/` | Portfolio optimization (Markowitz) | Genetic (AGG, AGE), Memetic (AM) |
+| 3 | `practice-3/` | Portfolio optimization (Markowitz) | ILS, Simulated Annealing (ES), CHC |
+| 4 | `practice-4/` | CEC'17 benchmark functions | LCA (Ladybug Courtship Algorithm) + variants |
 
-Por ahora, el repositorio contiene una práctica principal:
-
-- `practice-1/`: Práctica 1 sobre optimización de carteras (Portfolio de Markowitz) con algoritmos metaheurísticos en C++.
-
-## Estructura actual
+## Repository structure
 
 ```text
 MH-Practices/
-├── LICENSE
 ├── README.md
-└── practice-1/
-    ├── README.md
-    ├── informe/
-    ├── software/
-    └── tests/
+├── LICENSE
+├── .gitignore
+├── practice-1/
+│   ├── informe/          # LaTeX report
+│   ├── software/         # C++ source code
+│   └── tests/            # Unit tests
+├── practice-2/
+│   ├── informe/          # LaTeX report
+│   └── code/             # C++ source code
+├── practice-3/
+│   ├── informe/          # LaTeX report
+│   ├── code/             # C++ source code
+│   └── EXTRA/            # Extra work (plots, scripts)
+└── practice-4/
+    ├── informe/          # LaTeX report
+    └── software/         # C++/C source + Python analysis scripts
 ```
 
-## Contenido de `practice-1`
+## Tech stack
 
-- `informe/`: memoria en LaTeX (formulación, diseño, experimentos y trabajo voluntario).
-- `software/`: implementación en C++ de los algoritmos y utilidades de experimentación.
-- `tests/`: pruebas para validar componentes del problema Portfolio.
+- **C++17** + **CMake** — main algorithms and solvers.
+- **C** (CEC'17 benchmark) — test functions for practice 4.
+- **Python** — result analysis, plots, convergence graphs.
+- **LaTeX** — technical reports.
 
-## Documentación detallada
+## Build (general)
 
-Para instrucciones completas de compilación, ejecución, configuración y tests:
+Each practice has its own `CMakeLists.txt`. The general workflow is:
 
-- Ver `practice-1/README.md`.
-- Información específica del código fuente en `practice-1/software/LEEME.md`.
+```bash
+cd practice-N/software   # or practice-N/code
+mkdir build && cd build
+cmake ..
+make
+```
 
-## Tecnologías usadas (actualmente)
+Check each practice's `LEEME.md` or `README.md` for specific instructions.
 
-- **C++17** + **CMake** para el software principal.
-- **Python** (opcional) para generación de gráficas de resultados.
-- **LaTeX** para la memoria técnica.
+## Author
 
-## Próximos pasos (sección viva)
+**Ismael Sallami Moreno** — Double Degree in Computer Science and Mathematics, University of Granada.
 
-Este repositorio está preparado para crecer. En futuras actualizaciones se añadirá:
+## License
 
-- Índice de prácticas y objetivos por bloque.
-- Tabla de resultados comparativos entre prácticas.
-- Instrucciones homogéneas de build/test para todas las entregas.
-- Enlaces directos a informes y datasets por práctica.
-
----
-
-Si quieres, en el siguiente paso también puedo dejar una **plantilla estándar de README por práctica** para que las próximas secciones del repositorio mantengan el mismo formato.
+See [LICENSE](LICENSE).

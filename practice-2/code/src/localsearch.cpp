@@ -43,10 +43,11 @@ ResultMH<double> LocalSearch::optimize(Problem<double> &problem, int maxevals) {
             // If company i has 0 investment, 40% of 0 is 0 (useless move)
             if (current_sol[i] == 0.0) continue;
 
-            // Calculate the amount to transfer: 40% of the initial amount of i
             double transfer = current_sol[i] * m_ratio;
-            double new_i = current_sol[i] - transfer;
-            double new_j = current_sol[j] + transfer;
+            const double old_val_i = current_sol[i];
+            const double old_val_j = current_sol[j];
+            double new_i = old_val_i - transfer;
+            double new_j = old_val_j + transfer;
 
             // Check limits (including that it can be 0)
             // Since we subtract and add the same amount, it is NOT necessary to check the sum to 1
@@ -57,26 +58,27 @@ ResultMH<double> LocalSearch::optimize(Problem<double> &problem, int maxevals) {
                 continue; // This neighbor violates market rules, move to next pair
             }
 
-            // Apply the change temporarily
-            tSolution<double> neighbor = current_sol;
-            // If the value is residually small (less than tolerance), force it to 0
-            neighbor[i] = (new_i < 1e-8) ? 0.0 : new_i; 
-            neighbor[j] = (new_j < 1e-8) ? 0.0 : new_j;
+            // Apply the change in-place to avoid expensive vector copies
+            current_sol[i] = (new_i < 1e-8) ? 0.0 : new_i; 
+            current_sol[j] = (new_j < 1e-8) ? 0.0 : new_j;
 
             // Evaluate the new portfolio
-            tFitness neighbor_fitness = problem.fitness(neighbor);
+            tFitness neighbor_fitness = problem.fitness(current_sol);
             evals++;
 
             // "First Best" strategy
             // Accept the first neighbor that improves the current solution
             // Note: In our problem we seek to maximize fitness
             if (neighbor_fitness > current_fitness) {
-                current_sol = neighbor;
                 current_fitness = neighbor_fitness;
                 improvement_found = true;
                 
                 // Update the best solution and go back to step 2 (shuffle)
                 break; 
+            } else {
+                // Revert to original state if no improvement
+                current_sol[i] = old_val_i;
+                current_sol[j] = old_val_j;
             }
         }
         // If the for loop completes fully and improvement_found remains false,

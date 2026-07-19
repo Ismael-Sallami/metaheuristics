@@ -1,0 +1,118 @@
+# ====================
+# Build artifacts
+# ====================
+build/
+build_tmp/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+main
+
+# ====================
+# IDE / Editor
+# ====================
+.vscode/
+.idea/
+
+# ====================
+# Python
+# ====================
+.venv/
+__pycache__/
+*.pyc
+
+# ====================
+# AI / session files
+# ====================
+.opencode/
+.claude/
+chat_agy.txt
+gemini-chat.txt
+baks/
+**/sesion_open_code.md
+**/session-*.md
+**/sesion-*.md
+**/informe-MH-revision-*.md
+**/informe_cambios.md
+**/ANOTACIONES-REVISAR.md
+**/arreglo-*.md
+**/info-mutaciones-*.md
+**/TODA-TEORIA-CONVERTIDOMEDIANTEWEB.md
+
+# ====================
+# Backups and old files
+# ====================
+*-bak/
+*-back-*/
+*.bak
+*_OLD.*
+*_old.*
+
+# ====================
+# Compressed archives
+# ====================
+*.zip
+
+# ====================
+# Delivery folders (local only)
+# ====================
+**/Sallami Moreno Ismael/
+**/Sallami Moreno Ismael-sin-optimizar/
+
+# ====================
+# LaTeX generated files
+# ====================
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.idx
+*.ilg
+*.ind
+*.lof
+*.log
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+*.xdv
+*.pdf
+
+# ====================
+# Practice-specific excludes
+# ====================
+practice-1/software/S_P_100_resultados.csv
+practice-2/code/salida_main.txt
+practice-2/teoria-recursosExtra/
+practice-3/code/common/
+practice-3/code/config.cfg.bak
+practice-3/code/pr3_info_repomix_ia
+practice-3/teoria-apuntes/
+practice-3/EXTRA/analisis_comparativo.py
+
+# ====================
+# Misc plans/notes (not code)
+# ====================
+bases_teoricas.md
+cambios-trabajo-realizado.md
+guion.md
+plan-pr2-preview.md
+plan_pr2.md
+sem03.md
+Guion_P2Portfolio_MHs_2025-26.pdf
+Sem03-Problemas-Poblaciones-MHs-2526.pdf
+
+# ====================
+# Results data (large)
+# ====================
+practice-4/software/results_*/
+practice-4/software/figuras/
+practice-4/software/analysis_out/
+practice-4/software/tacolab/
+practice-3/EXTRA.md

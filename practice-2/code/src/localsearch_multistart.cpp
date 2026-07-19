@@ -56,8 +56,10 @@ ResultMH<double> LocalSearchMultiStart::optimize(Problem<double> &problem, int m
 
                 // Transfer 40% from i to j
                 double transfer = current_sol[i] * m_ratio;
-                double new_i = current_sol[i] - transfer;
-                double new_j = current_sol[j] + transfer;
+                const double old_val_i = current_sol[i];
+                const double old_val_j = current_sol[j];
+                double new_i = old_val_i - transfer;
+                double new_j = old_val_j + transfer;
 
                 // Check if new values are valid (within bounds or near zero)
                 bool valid_i = (new_i < 1e-8) || (new_i >= lo && new_i <= hi);
@@ -65,16 +67,15 @@ ResultMH<double> LocalSearchMultiStart::optimize(Problem<double> &problem, int m
 
                 if (!valid_i || !valid_j) continue;
 
-                tSolution<double> neighbor = current_sol;
-                neighbor[i] = (new_i < 1e-8) ? 0.0 : new_i; 
-                neighbor[j] = (new_j < 1e-8) ? 0.0 : new_j;
+                // Apply the change in-place to avoid expensive vector copies
+                current_sol[i] = (new_i < 1e-8) ? 0.0 : new_i; 
+                current_sol[j] = (new_j < 1e-8) ? 0.0 : new_j;
 
-                tFitness neighbor_fitness = problem.fitness(neighbor);
+                tFitness neighbor_fitness = problem.fitness(current_sol);
                 evals++;
 
                 // Accept first improvement found
                 if (neighbor_fitness > current_fitness) {
-                    current_sol = neighbor;
                     current_fitness = neighbor_fitness;
                     improvement_found = true;
                     
@@ -84,6 +85,10 @@ ResultMH<double> LocalSearchMultiStart::optimize(Problem<double> &problem, int m
                         global_best_sol = current_sol;
                     }
                     break; // Restart neighborhood search from new solution
+                } else {
+                    // Revert to original state if no improvement
+                    current_sol[i] = old_val_i;
+                    current_sol[j] = old_val_j;
                 }
             }
         }

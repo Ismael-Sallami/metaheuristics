@@ -2,234 +2,245 @@
 \section{Experimentos y Análisis de Resultados}
 \label{sec:experimentos}
 
-\subsection{Casos, Parámetros y Metodología}
+\subsection{Configuración Experimental y Parámetros}
 
-Configuración experimental utilizada:
+Para evitar redundancias, se remite al Punto \ref{sec:formulacion} para la definición formal del problema, los conjuntos de datos (IBEX 35, S\&P 100 y S\&P 500) y las restricciones sobre las posiciones de los activos. A continuación se especifican los detalles experimentales necesarios para la reproducibilidad y la comparación empírica.
 
-\begin{itemize}[noitemsep]
-    \item 3 mercados: IBEX 35, S\&P 100 y S\&P 500.
-    \item 50 ejecuciones independientes por algoritmo estocástico.
-    \item Presupuesto de 10.000 evaluaciones por ejecución.
-    \item Semilla base 42, incrementándose secuencialmente ($42+i$).
-    \item Entrenamiento en 2015--2024 y validación en 2025.
+\subsubsection*{Condiciones de ejecución}
+
+\begin{itemize}
+    \item \textbf{Ejecuciones independientes:} 50 por algoritmo y mercado. Semilla base $seed=42$, incrementada secuencialmente ($42+i$).
+    \item \textbf{Criterio de parada global:} máximo de 10\,000 evaluaciones de la función objetivo para todos los algoritmos estocásticos.
+    \item \textbf{Datos y partición temporal:} fase de búsqueda de optimización en el periodo 2015--2024 y fase de prueba de dicha optimización en el periodo 2025 para todos los algoritmos.
 \end{itemize}
 
-Todos estos parámetros se leen desde \texttt{config.cfg}, por lo que no es
-necesario recompilar para modificarlos.
+\subsubsection*{Parámetros de los algoritmos de trayectoria}
 
-\subsection{Salida Resumida de los Algoritmos Obligatorios}
+\begin{itemize}
+    \item \textbf{Enfriamiento Simulado:} $\mu=0.2$, $\phi=0.3$, $T_f=10^{-3}$, $max\_vecinos=10 \cdot n$ y $max\_exitos = n$ (equivalente a $0.1\cdot max\_vecinos$).
+    \item \textbf{BMB e ILS:} 5 arranques por ejecución. La BL interna se acota a 2000 evaluaciones por arranque.
+    \item \textbf{ILS:} tasa de mutación del 20\% para la perturbación de la mejor solución.
+    \item \textbf{ILS-ES:} misma perturbación que ILS, sustituyendo la BL por ES en cada arranque.
+\end{itemize}
 
-Las tablas siguientes recogen la salida media de las ejecuciones para los
-algoritmos obligatorios de la práctica. Se muestran solo estos métodos para que
-la comparación quede centrada en la parte común del enunciado.
+\subsubsection*{Parámetros de la búsqueda local en el algoritmo de referencia (P2)}
+
+El mejor algoritmo de la Práctica 2 identificado en las ejecuciones es \textbf{AM-Best}. Se mantiene como referencia en tablas y análisis con los parámetros configurados en \texttt{config.cfg}:
+
+\begin{itemize}
+    \item \textbf{Frecuencia:} cada 10 generaciones.
+    \item \textbf{Aplicación:} BL aplicada al 10\% superior (AM-Best).
+    \item \textbf{Intensidad:} máximo 100 evaluaciones por BL; ratio de transferencia reducido al 15\%.
+\end{itemize}
+
+\subsection{Resultados Numéricos y Boxplots}
+
+Se muestran las tablas exigidas por el guion, incluyendo Greedy, Random y BL (P1), el mejor algoritmo de P2 (AM-Best), y las técnicas de trayectoria de P3 (BMB, ILS, ES, ILS-ES). Los valores provienen de la salida de ejecución en \texttt{salida.txt}.
 
 \begin{table}[H]
 \centering
-\scriptsize
-\begin{tabular}{@{}lrrrrrr@{}}
-\toprule
-\textbf{IBEX 35} & \textbf{2015-2024 Fitness} & \textbf{2025 Fitness} & \textbf{Profit} & \textbf{Desv} & \textbf{Evals} & \textbf{Tiempo(s)} \\
-\midrule
-Greedy    & -4.794 & -3.227 & -0.033 & 0.000 & 1     & 0.000 \\
-Random    & -4.911 & -3.305 &  0.052 & 0.091 & 10000 & 0.024 \\
-BL        & -4.614 & -3.116 &  0.021 & 0.039 & 1078  & 0.001 \\
-AGG-Arit  & -4.663 & -3.142 &  0.042 & 0.052 & 10000 & 0.009 \\
-AGG-BLX   & -4.496 & -3.091 &  0.036 & 0.006 & 10000 & 0.010 \\
-AGE-Arit  & -4.587 & -3.119 &  0.043 & 0.039 & 10000 & 0.010 \\
-AGE-BLX   & -4.499 & -3.097 &  0.033 & 0.010 & 10000 & 0.011 \\
-AM-All    & -4.591 & -3.118 &  0.036 & 0.035 & 10000 & 0.008 \\
-AM-Rand   & -4.490 & -3.084 &  0.033 & 0.000 & 10000 & 0.009 \\
-AM-Best   & -4.490 & -3.083 &  0.033 & 0.000 & 10000 & 0.009 \\
-\bottomrule
+\caption{Resultados numéricos -- IBEX 35}
+\label{tab:global-ibex35}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\hline
+Algoritmo & Fitness(2015--2024) & Fitness(2025) & Beneficio(2025) & Std & Evaluaciones & Tiempo (s) \\
+\hline
+Greedy & -4.794 & -3.227 & -0.033 & 0.000 & 1 & 0.000 \\
+Random & -4.911 & -3.305 & 0.052 & 0.091 & 10000 & 0.025 \\
+BL & -4.614 & -3.116 & 0.021 & 0.039 & 1078 & 0.001 \\
+Mejor P2 (AM-Best) & -4.490 & -3.083 & 0.033 & 0.000 & 10000 & 0.007 \\
+BMB & -4.574 & -3.107 & 0.023 & 0.020 & 5403 & 0.004 \\
+ILS & -4.606 & -3.115 & 0.021 & 0.036 & 4349 & 0.003 \\
+ES & -4.653 & -3.126 & 0.020 & 0.010 & 3244 & 0.002 \\
+ILS-ES & -4.649 & -3.127 & 0.020 & 0.014 & 3130 & 0.002 \\
+\hline
 \end{tabular}
-\caption{Resultados medios en IBEX 35 para los algoritmos obligatorios.}
-\label{tab:ibex-oblig}
+}
 \end{table}
 
 \begin{table}[H]
 \centering
-\scriptsize
-\begin{tabular}{@{}lrrrrrr@{}}
-\toprule
-\textbf{S\&P 100} & \textbf{2015-2024 Fitness} & \textbf{2025 Fitness} & \textbf{Profit} & \textbf{Desv} & \textbf{Evals} & \textbf{Tiempo(s)} \\
-\midrule
-Greedy    & -3.305 & -3.791 & 0.100 & 0.000 & 1     & 0.000 \\
-Random    & -3.400 & -4.080 & 0.079 & 0.041 & 10000 & 0.098 \\
-BL        & -3.116 & -3.890 & 0.097 & 0.084 & 4351  & 0.033 \\
-AGG-Arit  & -3.120 & -3.845 & 0.083 & 0.041 & 10000 & 0.071 \\
-AGG-BLX   & -2.879 & -3.721 & 0.096 & 0.023 & 10000 & 0.075 \\
-AGE-Arit  & -3.157 & -3.872 & 0.082 & 0.054 & 10000 & 0.071 \\
-AGE-BLX   & -2.937 & -3.744 & 0.094 & 0.037 & 10000 & 0.075 \\
-AM-All    & -3.110 & -3.830 & 0.085 & 0.037 & 10000 & 0.073 \\
-AM-Rand   & -2.822 & -3.735 & 0.099 & 0.011 & 10000 & 0.074 \\
-AM-Best   & -2.814 & -3.740 & 0.102 & 0.008 & 10000 & 0.074 \\
-\bottomrule
+\caption{Resultados numéricos -- S\&P 100}
+\label{tab:global-sp100}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\hline
+Algoritmo & Fitness(2015--2024) & Fitness(2025) & Beneficio(2025) & Std & Evaluaciones & Tiempo (s) \\
+\hline
+Greedy & -3.305 & -3.791 & 0.100 & 0.000 & 1 & 0.000 \\
+Random & -3.400 & -4.080 & 0.079 & 0.041 & 10000 & 0.069 \\
+BL & -3.116 & -3.890 & 0.097 & 0.084 & 4351 & 0.023 \\
+Mejor P2 (AM-Best) & -2.816 & -3.734 & 0.100 & 0.008 & 10000 & 0.036 \\
+BMB & -3.006 & -3.863 & 0.092 & 0.046 & 10000 & 0.065 \\
+ILS & -3.114 & -3.888 & 0.097 & 0.082 & 9926 & 0.055 \\
+ES & -3.300 & -3.987 & 0.088 & 0.030 & 1828 & 0.011 \\
+ILS-ES & -3.311 & -3.991 & 0.085 & 0.038 & 2863 & 0.017 \\
+\hline
 \end{tabular}
-\caption{Resultados medios en S\&P 100 para los algoritmos obligatorios.}
-\label{tab:sp100-oblig}
+}
 \end{table}
 
 \begin{table}[H]
 \centering
-\scriptsize
-\begin{tabular}{@{}lrrrrrr@{}}
-\toprule
-\textbf{S\&P 500} & \textbf{2015-2024 Fitness} & \textbf{2025 Fitness} & \textbf{Profit} & \textbf{Desv} & \textbf{Evals} & \textbf{Tiempo(s)} \\
-\midrule
-Greedy    & -3.370 & -3.909 & 0.024 & 0.000 & 1     & 0.000 \\
-Random    & -3.648 & -4.364 & 0.019 & 0.044 & 10000 & 1.851 \\
-BL        & -3.428 & -4.330 & 0.004 & 0.154 & 9645  & 1.526 \\
-AGG-Arit  & -2.961 & -3.958 & 0.018 & 0.082 & 10000 & 1.504 \\
-AGG-BLX   & -2.791 & -3.893 & 0.023 & 0.046 & 10000 & 1.490 \\
-AGE-Arit  & -3.176 & -4.073 & 0.018 & 0.074 & 10000 & 1.478 \\
-AGE-BLX   & -3.012 & -3.984 & 0.023 & 0.066 & 10000 & 1.483 \\
-AM-All    & -3.204 & -4.102 & 0.015 & 0.040 & 10000 & 1.573 \\
-AM-Rand   & -2.738 & -3.907 & 0.017 & 0.034 & 10000 & 1.537 \\
-AM-Best   & -2.731 & -3.905 & 0.017 & 0.035 & 10000 & 1.538 \\
-\bottomrule
+\caption{Resultados numéricos -- S\&P 500}
+\label{tab:global-sp500}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\hline
+Algoritmo & Fitness(2015--2024) & Fitness(2025) & Beneficio(2025) & Std & Evaluaciones & Tiempo (s) \\
+\hline
+Greedy & -3.370 & -3.909 & 0.024 & 0.000 & 1 & 0.000 \\
+Random & -3.648 & -4.364 & 0.019 & 0.044 & 10000 & 0.678 \\
+BL & -3.428 & -4.330 & 0.004 & 0.154 & 9645 & 0.603 \\
+Mejor P2 (AM-Best) & -2.735 & -3.898 & 0.017 & 0.037 & 10000 & 0.367 \\
+BMB & -3.263 & -4.189 & 0.010 & 0.078 & 10000 & 1.071 \\
+ILS & -3.434 & -4.312 & 0.005 & 0.146 & 10000 & 0.689 \\
+ES & -4.062 & -4.760 & 0.010 & 0.101 & 308 & 0.016 \\
+ILS-ES & -4.035 & -4.761 & 0.007 & 0.092 & 546 & 0.030 \\
+\hline
 \end{tabular}
-\caption{Resultados medios en S\&P 500 para los algoritmos obligatorios.}
-\label{tab:sp500-oblig}
+}
 \end{table}
 
-\subsection{Resultados Obtenidos (Algoritmos Obligatorios)}
-
-La salida completa de ejecución muestra que, en términos de \textit{train}, los
-métodos evolutivos y meméticos mejoran de forma clara al Greedy, pero la mejora
-se reduce cuando se mide en \textit{test}. Esa diferencia entre entrenamiento y
-validación es precisamente la que aparece reflejada en los boxplots: algunas
-estrategias alcanzan soluciones muy buenas en promedio, pero con mayor
-dispersión y presencia de valores atípicos.
-
-Si se toma Greedy como referencia\footnote{$\text{Mejora(\%)} = \frac{|\text{Algoritmo} - \text{Greedy}|}{|\text{Greedy}|} \times 100$, donde los valores provienen de la tabla de resultados.}, la mejora media en \textit{train} de las
-mejores configuraciones ronda aproximadamente un \(6\%\) en IBEX 35, un
-\(15\%\) en S\&P 100 y un \(19\%\) en S\&P 500. En \textit{test}, en cambio,
-la ganancia se comprime: alrededor de un \(4\%-5\%\) en IBEX 35, cerca de un
-\(2\%\) en S\&P 100 y apenas un \(1\%\) en S\&P 500. Esto indica que el
-problema se vuelve más exigente al crecer el mercado y que el sobreajuste entre
-entrenamiento y validación gana peso en los casos grandes.
-
-\subsection{Análisis de las Distribuciones}
-
-Las Figuras~\ref{fig:ibex-box}, \ref{fig:sp100-box} y \ref{fig:sp500-box}
-permiten observar la estabilidad de cada algoritmo. Cada mercado se muestra en
-dos partes para mantener la legibilidad. Greedy aparece como una raya
-horizontal porque no tiene variabilidad: sirve como referencia rápida, pero
-queda lejos de los métodos poblacionales en \textit{train}. Random es el más
-irregular en todos los mercados, lo que podría confirmanos que la aleatoriedad es impredecible.
-
-En los algoritmos genéticos, el cruce BLX domina de forma bastante clara al
-aritmético. La mejora visual no es solo de posición de la mediana: también se
-observa una reducción de dispersión y menos ejecuciones extremas. En términos
-prácticos, BLX suele aportar una ganancia adicional de entre un \(1\%\) y un
-\(3\%\) en \textit{test} frente al cruce aritmético, con una estabilidad mayor.
-Esto se aprecia especialmente en IBEX 35 y S\&P 100, donde las cajas de BLX son
-más compactas y los whiskers quedan mejor controlados.
-
-La comparación entre AGG y AGE muestra que no existe una superioridad universal
-del esquema estacionario sobre el generacional. En IBEX 35, ambos se mueven en
-rangos parecidos, aunque AGE no aporta una mejora clara sobre AGG. En S\&P 100,
-AGG-BLX y AGE-BLX quedan muy cerca, pero AGG suele mantener una mediana algo
-mejor y menos ruido. En S\&P 500, la tendencia se mantiene: el modelo generacional
-con BLX ofrece una combinación más equilibrada entre calidad media y robustez.
-
-Los boxplots también muestran el papel de los valores atípicos en las distintas ejecuciones. En casi todos los gráficos aparecen uno o dos outliers aislados, lo que indica que incluso cuando la dispersión central es reducida todavía existen ejecuciones puntuales alejadas del comportamiento habitual. 
-
-Entre los algoritmos obligatorios, AM-All presenta una dispersión superior a AM-Rand y AM-Best. Esa diferencia confirma que aplicar la búsqueda local a toda la población incrementa el coste de explotación sin traducirse en una mejora proporcional.
-
-Entre las variantes meméticas, AM-Rand y AM-Best quedan prácticamente empatadas,
-con cajas estrechas y mediana alta. En varios mercados apenas se distinguen en
-los gráficos, lo que indica que la selección aleatoria de una fracción de la
-población o la selección del bloque más prometedor terminan convergiendo a una
-calidad muy similar. En cambio, AM-All suele quedar por detrás y es más sensible
-a ejecuciones malas, por lo que no compensa su mayor intensidad de búsqueda
-local.
-
-\subsection{Resumen Comparativo}
-
-Si se resume el comportamiento global de los gráficos, pueden extraerse cuatro
-ideas principales. Primero, el rendimiento relativo empeora al pasar de IBEX 35
-a S\&P 100 y, sobre todo, a S\&P 500: el problema grande es más difícil y las
-ventajas sobre Greedy se concentran en \textit{train}, no tanto en \textit{test}.
-Segundo, BLX es la opción más robusta frente al cruce aritmético, tanto en la
-calidad central como en la dispersión. Tercero, la búsqueda local sobre toda la
-población no resulta la mejor estrategia; es preferible limitarla a una parte de
-los individuos o concentrarla en los mejores candidatos. Cuarto, los algoritmos
-con mejores medianas no siempre son los que presentan menos outliers, por lo que
-la estabilidad debe considerarse junto con el valor medio.
-
-En cuanto al coste temporal, la diferencia entre algoritmos es pequeña frente al
-presupuesto total de evaluaciones. Los métodos más simples apenas tardan unas
-pocas centésimas de segundo en IBEX y S\&P 100, mientras que en S\&P 500 el
-tiempo aumenta, pero sigue estando dominado por el coste de evaluación y no por
-la lógica concreta del operador evolutivo. Por tanto, la selección del algoritmo
-debe hacerse más por calidad y estabilidad que por tiempo de ejecución.
+A continuación se presentan los boxplots correspondientes a los algoritmos de la Práctica 3 para cada mercado:
 
 \begin{figure}[H]
-    \centering
-    \begin{minipage}[t]{0.9\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{figuras/fig_ibex_oblig_pt1.png}
-
-        \smallskip
-        {\small Parte 1}
-    \end{minipage}
-    
-    \vspace{0.5cm}
-    
-    \begin{minipage}[t]{0.9\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{figuras/fig_ibex_oblig_pt2.png}
-
-        \smallskip
-        {\small Parte 2}
-    \end{minipage}
-    \caption{Distribución del \textit{fitness} por algoritmo en IBEX 35.}
-    \label{fig:ibex-box}
+\centering
+\includegraphics[width=0.8\textwidth]{figuras/IBEX_35_RESULTS_pr3_obligatorios.png}
+\caption{Boxplots algoritmos trayectoria (Práctica 3) -- IBEX 35.}
+\label{fig:pr3-obligatorios-ibex}
 \end{figure}
 
 \begin{figure}[H]
-    \centering
-    \begin{minipage}[t]{0.9\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{figuras/fig_sp100_oblig_pt1.png}
-
-        \smallskip
-        {\small Parte 1}
-    \end{minipage}
-    
-    \vspace{0.5cm}
-    
-    \begin{minipage}[t]{0.9\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{figuras/fig_sp100_oblig_pt2.png}
-
-        \smallskip
-        {\small Parte 2}
-    \end{minipage}
-    \caption{Distribución del \textit{fitness} por algoritmo en S\&P 100.}
-    \label{fig:sp100-box}
+\centering
+\includegraphics[width=0.8\textwidth]{\detokenize{figuras/S&P_100_RESULTS_pr3_obligatorios.png}}
+\caption{Boxplots algoritmos trayectoria (Práctica 3) -- S\&P 100.}
+\label{fig:pr3-obligatorios-sp100}
 \end{figure}
 
 \begin{figure}[H]
-    \centering
-    \begin{minipage}[t]{0.9\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{figuras/fig_sp500_oblig_pt1.png}
-
-        \smallskip
-        {\small Parte 1}
-    \end{minipage}
-    
-    \vspace{0.5cm}
-    
-    \begin{minipage}[t]{0.9\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{figuras/fig_sp500_oblig_pt2.png}
-
-        \smallskip
-        {\small Parte 2}
-    \end{minipage}
-    \caption{Distribución del \textit{fitness} por algoritmo en S\&P 500.}
-    \label{fig:sp500-box}
+\centering
+\includegraphics[width=0.8\textwidth]{\detokenize{figuras/S&P_500_RESULTS_pr3_obligatorios.png}}
+\caption{Boxplots algoritmos trayectoria (Práctica 3) -- S\&P 500.}
+\label{fig:pr3-obligatorios-sp500}
 \end{figure}
+
+\subsection{Análisis de Resultados}
+
+El guion exige comparar algoritmos \textbf{similares} para aislar el elemento diferenciador.
+La Figura~\ref{fig:heatmap-mejora} sintetiza en términos porcentuales la mejora (o empeoramiento)
+de cada algoritmo respecto a la Búsqueda Local (BL), que actúa como referencia de partida.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuras/heatmap_mejora_vs_bl.png}
+\caption{Mejora relativa porcentual de cada algoritmo respecto a BL.
+Verde = supera a BL; rojo = peor que BL.}
+\label{fig:heatmap-mejora}
+\end{figure}
+
+\subsubsection*{BL frente a las técnicas de trayectoria (BMB, ILS, ES, ILS-ES)}
+
+La Búsqueda Local constituye el bloque base de todos los algoritmos de trayectoria de la P3:
+BMB e ILS la invocan repetidamente, mientras que ES la reemplaza por exploración estocástica.
+El heatmap (Figura~\ref{fig:heatmap-mejora}) muestra que \textbf{BMB mejora a BL en un
+0.87\,\% en IBEX 35 y un 3.54\,\% en S\&P 100}, pero no consigue superarla en S\&P 500
+($-4.8\,\%$). Esto se explica por el comportamiento de la BL en alta dimensión: con
+presupuesto total de 10\,000 evaluaciones y 5 arranques de 2000 cada uno, BMB explora bien
+cuencas diferentes en problemas pequeños, pero en S\&P 500 (457 activos) cada arranque de 2000
+evaluaciones es insuficiente para que la BL interna converja a un óptimo de calidad.
+
+\textbf{ILS}, a diferencia de BMB, reutiliza la mejor solución mediante perturbación del 20\,\%.
+En IBEX 35 obtiene un resultado cercano a BL ($-0.26\,\%$ respecto a ella), y en S\&P 100
+prácticamente la iguala ($-0.06\,\%$). La perturbación del ILS, al barajar el 20\,\% de los
+pesos, no introduce suficiente diversidad en espacios de alta dimensión, por lo que la búsqueda
+reincide en cuencas similares a la del mejor actual: ILS actúa de forma más explotadora que BMB.
+
+\textbf{ES} obtiene resultados peores que BL en los tres mercados ($-0.84\,\%$ en IBEX 35,
+$-5.9\,\%$ en S\&P 100, $-18.5\,\%$ en S\&P 500). Esto responde a una razón estructural: con
+$\max\_vecinos = 10n$ y solo $\approx 308$ evaluaciones en S\&P 500, el ES realiza muy pocos
+ciclos de enfriamiento antes de agotar el presupuesto, sin llegar a explotar el espacio de forma
+efectiva. Sin embargo, su \textbf{coste es drásticamente menor} (véase la Figura~\ref{fig:scatter-tradeoff}),
+lo que lo convierte en la opción más eficiente en tiempo por unidad de calidad en problemas pequeños.
+
+\subsubsection*{BMB frente a ILS: reinicio ciego vs. reinicio informado}
+
+Ambos algoritmos comparten exactamente la misma estructura (5 arranques de BL con 2000 evaluaciones),
+con una única diferencia: \textbf{BMB genera el punto de partida de forma aleatoria}, mientras que
+\textbf{ILS muta la mejor solución encontrada}. La diferencia de fitness media en IBEX 35 es del
+$0.70\,\%$ a favor de BMB, y en S\&P 100 del $2.9\,\%$. Este resultado, aparentemente contraintuitivo,
+se justifica porque la perturbación del 20\,\% del ILS no es suficientemente disruptiva para escapar de la
+cuenca del mejor actual en carteras de muchos activos, haciendo que todos los arranques exploren
+la misma zona del espacio. El reinicio completamente aleatorio de BMB, en cambio, garantiza la
+cobertura de cuencas diversas en cada arranque.
+
+\subsubsection*{ES frente a ILS-ES: impacto de sustituir BL por ES como motor}
+
+ILS-ES sustituye la BL interna del ILS por un enfriamiento simulado completo. En IBEX 35, ILS-ES
+obtiene prácticamente el mismo fitness que ES ($-4.649$ vs. $-4.653$, diferencia del $0.09\,\%$),
+pero en S\&P 100 es ligeramente peor ($-3.311$ vs. $-3.300$, diferencia de $0.33\,\%$). La
+perturbación ILS no aporta ventaja apreciable sobre ejecutar el ES desde una solución aleatoria,
+ya que el ES por sí solo ya explora zonas alejadas del espacio mediante el criterio de Metrópolis.
+Esto sugiere que la hibridación ILS-ES es redundante cuando el ES tiene presupuesto suficiente.
+
+\subsubsection*{AM-Best (P2) como referencia superior}
+
+El mejor algoritmo de la P2 (AM-Best) mejora a BL en un \textbf{2.69\,\% en IBEX 35,
+9.62\,\% en S\&P 100 y 20.2\,\% en S\&P 500}. La superioridad crece con la dimensión porque
+la búsqueda poblacional distribuye las evaluaciones explorando simultáneamente múltiples cuencas.
+Con 10\,000 evaluaciones y poblaciones de 50 individuos, AM-Best realiza 200 generaciones con
+BL aplicada selectivamente al 10\,\% mejor, combinando exploración y explotación de forma mucho
+más efectiva que cualquier algoritmo de trayectoria única.
+
+\subsubsection*{Análisis de outliers}
+
+Los boxplots de las Figuras~\ref{fig:pr3-obligatorios-ibex}--\ref{fig:pr3-obligatorios-sp500}
+muestran comportamientos atípicos que conviene justificar teóricamente:
+\begin{itemize}[noitemsep]
+    \item \textbf{IBEX 35 — outlier superior en BMB:} en una ejecución, el arranque aleatorio
+    inicializó en una cuenca de atracción especialmente favorable; al no tener memoria del mejor
+    anterior (como sí tiene ILS), ese arranque fue explotado hasta el máximo por la BL interna.
+    \item \textbf{IBEX 35 — outliers superiores en ILS-ES:} la combinación del criterio de
+    Metrópolis con la perturbación ILS permitió escapar de valles locales en dos ejecuciones
+    concretas, saltando a cuencas de mayor calidad que no alcanzó ninguna otra técnica.
+    \item \textbf{S\&P 100 — outlier inferior en BMB:} el punto de partida aleatorio cayó en
+    una zona extremadamente pobre del espacio, y los 2000 evaluaciones de BL no fueron suficientes
+    para escapar de ese valle.
+    \item \textbf{S\&P 500 — outlier superior en ES:} en esa ejecución, el esquema de enfriamiento
+    Cauchy modificado encontró por aceptación probabilística una cuenca de calidad inhabitual,
+    demostrando que el criterio de Metrópolis puede —en ocasiones— superar a la explotación pura
+    de BL incluso con muy pocas evaluaciones.
+\end{itemize}
+
+\subsection{Estudio de Eficiencia y Trade-off Calidad/Coste}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuras/scatter_tradeoff_calidad_tiempo.png}
+\caption{Trade-off calidad vs.\ coste computacional. Superior-izquierda = mayor calidad
+con menor tiempo de ejecución.}
+\label{fig:scatter-tradeoff}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuras/barchart_p3_comparativa.png}
+\caption{Comparativa directa de fitness (arriba) y tiempo en escala logarítmica (abajo)
+para los algoritmos P3 y BL en los tres mercados.}
+\label{fig:barchart-p3}
+\end{figure}
+
+La Figura~\ref{fig:scatter-tradeoff} ilustra el trade-off fundamental: ES e ILS-ES ocupan
+la zona de \textit{bajo tiempo y baja calidad} en S\&P 500, mientras que BMB e ILS se desplazan
+hacia tiempos mayores con calidad superior. En IBEX 35, todos los algoritmos de P3 se agrupan
+en la zona de bajo coste ($<0.01$ s), siendo BMB el de mayor calidad relativa.
+
+La Figura~\ref{fig:barchart-p3} confirma en escala logarítmica que \textbf{ES e ILS-ES son
+entre 3$\times$ y 40$\times$ más rápidos que BMB e ILS} en S\&P 500, pagando ese coste con
+una reducción de calidad del $\approx 18\,\%$ respecto a BL. Este trade-off clásico
+intensificación-coste es la razón por la que el guion incluye técnicas de trayectoria tanto
+simple (ES) como múltiple (BMB, ILS): dependiendo de las restricciones de tiempo de la aplicación
+real, uno u otro tipo de algoritmo resultará más adecuado.
+
+

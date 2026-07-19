@@ -11,7 +11,7 @@ Para evitar redundancias, se remite al Punto \ref{sec:formulacion} para la defin
 \begin{itemize}
     \item \textbf{Ejecuciones independientes:} 50 por algoritmo y mercado. Semilla base $seed=42$, incrementada secuencialmente ($42+i$).
     \item \textbf{Criterio de parada global:} máximo de 10\,000 evaluaciones de la función objetivo para todos los algoritmos estocásticos.
-    \item \textbf{Datos y partición temporal:} entrenamiento 2015--2024 y prueba 2025 para todos los algoritmos.
+    \item \textbf{Datos y partición temporal:} fase de búsqueda de optimización en el periodo 2015--2024 y fase de prueba de dicha optimización en el periodo 2025 para todos los algoritmos.
 \end{itemize}
 
 \subsubsection*{Parámetros de los algoritmos de trayectoria}
@@ -128,39 +128,113 @@ A continuación se presentan los boxplots correspondientes a los algoritmos de l
 
 \subsection{Análisis de Resultados}
 
-\subsubsection*{Comparativa con los algoritmos de referencia (P1/P2)}
-
-En los tres mercados, el mejor algoritmo de la Práctica 2 (AM-Best) domina en fitness medio, tanto en entrenamiento como en test, confirmando que las técnicas poblacionales con intensificación selectiva son más eficaces cuando hay presupuesto suficiente de evaluaciones. En IBEX 35, AM-Best mejora a BL en $\approx 0.124$ puntos de fitness y reduce la dispersión (Std $=0.000$). En S\&P 100 y S\&P 500, la ventaja es aún mayor, señalando que la búsqueda poblacional explora de forma más global en alta dimensión. Esto justifica su uso como algoritmo de referencia frente a las trayectorias de P3.
-
-\subsubsection*{ES frente a BL: exploración estocástica vs. explotación local}
-
-ES obtiene fitness medios inferiores a BL en los tres mercados (Tablas \ref{tab:global-ibex35}--\ref{tab:global-sp500}), pero con tiempos de ejecución sustancialmente menores y desviaciones típicas moderadas. En IBEX 35 la diferencia de calidad es pequeña, y en S\&P 500 se observa un outlier superior (Figura~\ref{fig:pr3-obligatorios-sp500}), lo que confirma la capacidad del criterio de Metrópolis para escapar ocasionalmente a mejores cuencas de atracción que BL.
-
-\subsubsection*{BMB frente a ILS: reinicio aleatorio vs. reinicio informado}
-
-BMB supera a ILS en fitness medio en los tres mercados, y además presenta menor dispersión (Std). En este problema, el reinicio puramente aleatorio parece más efectivo que la perturbación del 20\%, posiblemente porque la mutación no altera suficientemente la estructura de la cartera en alta dimensión, conduciendo al ILS a valles similares. Los boxplots refuerzan esta idea: en S\&P 100 aparece un outlier inferior en BMB, pero también una mayor estabilidad en el resto de ejecuciones.
-
-\subsubsection*{ILS-ES: hibridación y sensibilidad}
-
-ILS-ES muestra un comportamiento mixto: mejora a ES en IBEX 35 y S\&P 500, pero es ligeramente peor en S\&P 100. La combinación de saltos de ILS con ES permite ocasionalmente encontrar soluciones de alta calidad (dos outliers superiores en IBEX 35 y uno en S\&P 100), aunque también introduce sensibilidad a los parámetros de enfriamiento, reflejada en un outlier inferior en S\&P 500.
-
-\subsubsection*{Análisis de outliers (indicaciones\_analisis)}
-
-Las figuras de boxplot muestran patrones destacados que conviene justificar:
-\begin{itemize}
-    \item \textbf{IBEX 35:} un outlier superior en BMB y dos outliers superiores en ILS-ES.
-    \item \textbf{S\&P 100:} un outlier inferior en BMB y un outlier superior en ILS-ES.
-    \item \textbf{S\&P 500:} un outlier superior en ES y un outlier inferior en ILS-ES.
-\end{itemize}
-Estos casos se corresponden con ejecuciones donde el criterio de aceptación probabilístico (ES) o las perturbaciones de ILS cambian la trayectoria hacia cuencas de atracción atípicas, elevando o degradando el fitness respecto a la media.
-
-\subsection{Estudio de Eficiencia}
+El guion exige comparar algoritmos \textbf{similares} para aislar el elemento diferenciador.
+La Figura~\ref{fig:heatmap-mejora} sintetiza en términos porcentuales la mejora (o empeoramiento)
+de cada algoritmo respecto a la Búsqueda Local (BL), que actúa como referencia de partida.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\textwidth]{figuras/eficiencia_trayectoria.png}
-\caption{Figura 4: Eficiencia de los algoritmos de trayectoria según la dimensión del problema.}
-\label{fig:eficiencia-trayectoria}
+\includegraphics[width=\textwidth]{figuras/heatmap_mejora_vs_bl.png}
+\caption{Mejora relativa porcentual de cada algoritmo respecto a BL.
+Verde = supera a BL; rojo = peor que BL.}
+\label{fig:heatmap-mejora}
 \end{figure}
 
-La Figura~\ref{fig:eficiencia-trayectoria} muestra que ES e ILS-ES son los más rápidos en las tres dimensiones, debido a que consumen menos evaluaciones internas por arranque. En cambio, BMB e ILS presentan mayor coste temporal por la repetición de BL (5 arranques de 2000 evaluaciones), lo que incrementa notablemente el tiempo en S\&P 500. Esta diferencia confirma el trade-off clásico entre intensificación (BL repetida) y coste computacional.
+
+\subsubsection*{BL frente a las técnicas de trayectoria (BMB, ILS, ES, ILS-ES)}
+
+La Búsqueda Local (BL) actúa como el punto de referencia y el bloque constituyente principal de los algoritmos BMB e ILS. Al analizar su rendimiento frente a las demás alternativas:
+
+\textbf{BMB} demuestra ser sistemáticamente superior a BL, logrando mejoras del \textbf{+0.87\% en IBEX 35, +3.53\% en S\&P 100 y +4.81\% en S\&P 500}. Esta clara tendencia al alza a medida que aumenta la dimensión del problema se justifica teóricamente por la naturaleza explotadora de la BL. En un único arranque, la BL converge rápidamente al óptimo local de su cuenca de atracción inicial. BMB, al realizar 5 arranques aleatorios independientes con 2000 evaluaciones cada uno, consigue explorar múltiples regiones disjuntas del espacio de soluciones y seleccionar la mejor de ellas. Cuanto mayor es el espacio de búsqueda (especialmente en S\&P 500 con $N=457$ activos), más crítica resulta esta diversificación inicial para no quedar atrapado en cuencas de atracción de baja calidad.
+
+\textbf{ILS} ofrece una mejora más modesta frente a BL, con un \textbf{+0.17\% en IBEX 35 y +0.06\% en S\&P 100}, mientras que en S\&P 500 experimenta un ligero retroceso del \textbf{-0.18\%}. Al contrario que BMB, ILS no realiza reinicios a ciegas, sino que aplica una perturbación del 20\% sobre la mejor solución actual. El hecho de que ILS sea menos efectivo que BMB en dimensiones altas revela que una mutación del 20\% no es lo suficientemente disruptiva en carteras grandes, provocando que la BL interna vuelva a caer reiteradamente en la misma cuenca de atracción o en cuencas adyacentes de similar calidad. Esto evidencia un exceso de explotación (búsqueda local muy concentrada) frente a la efectiva exploración global por reinicios aleatorios de BMB.
+
+\textbf{ES} (Enfriamiento Simulado) obtiene resultados inferiores a la BL en todas las instancias: \textbf{-0.85\% en IBEX 35, -5.91\% en S\&P 100 y -18.49\% en S\&P 500}. La notable degradación de la calidad en S\&P 500 se debe a la parametrización interna y al presupuesto máximo de 10\,000 evaluaciones. Al fijarse $\max\_vecinos = 10N$ (4570 en S\&P 500) y $\max\_exitos = 1N$ (457), cada etapa de temperatura consume un volumen altísimo de evaluaciones. Esto restringe el número de enfriamientos térmicos $M$ a poco más de 2 ciclos antes de agotar el límite de 10\,000. Como consecuencia, el algoritmo finaliza prematuramente en fases de alta temperatura donde predomina la aceptación de movimientos desfavorables (comportamiento puramente exploratorio), sin presupuesto suficiente para la fase final de cristalización e intensificación hacia el óptimo local. Sin embargo, su coste temporal es extremadamente bajo (véanse las Figuras~\ref{fig:scatter-tradeoff-ibex}--\ref{fig:scatter-tradeoff-sp500}).
+
+\subsubsection*{BMB frente a ILS: reinicio ciego vs. perturbación informada}
+
+La comparación directa de estos dos métodos ilustra la tensión entre la diversificación radical y la intensificación con memoria. BMB supera a ILS en los tres conjuntos evaluados (ventaja neta de +0.70\% en IBEX 35, +3.47\% en S\&P 100 y +4.99\% en S\&P 500). En espacios de búsqueda reducidos (IBEX 35), la diferencia es pequeña porque las cuencas de atracción son pocas y fáciles de optimizar. No obstante, en el S\&P 500, la superioridad de BMB confirma que reiniciar la búsqueda desde 5 puntos del espacio geográficamente inconexos es una estrategia mucho más robusta para el problema de cartera que iterar sobre variaciones locales de una única solución base como hace ILS.
+
+\subsubsection*{ES frente a ILS-ES: impacto de sustituir BL por ES como motor}
+
+La hibridación ILS-ES sustituye la BL del ILS por el algoritmo de enfriamiento simulado como motor de optimización local. Comparado con la BL de referencia, ILS-ES obtiene pérdidas de calidad de \textbf{-0.76\% en IBEX 35, -6.26\% en S\&P 100 y -17.71\% en S\&P 500}. Aunque supera ligeramente a ES básico en todos los casos (por ejemplo, recuperando un +0.78\% de fitness relativo en S\&P 500), no logra igualar la calidad de ILS con BL. Esto confirma que el enfriamiento simulado, al estar limitado por el estricto presupuesto de evaluaciones, no actúa como un buen optimizador local de intensificación intermedia dentro de un esquema reiterado. Además, el criterio de Metrópolis propio de ES ya proporciona suficiente capacidad de escape ante óptimos locales, haciendo que el operador de perturbación externo de ILS resulte redundante y aporte escasa mejora.
+
+\subsubsection*{AM-Best (P2) como referencia superior}
+
+El algoritmo evolutivo memético con intensificación local selectiva (AM-Best) de la práctica anterior domina con rotundidad en todos los escenarios, logrando mejoras sobre BL del \textbf{+2.69\% en IBEX 35, +9.63\% en S\&P 100 y +20.22\% en S\&P 500}. La ventaja crece de manera exponencial con la dimensionalidad porque las aproximaciones poblacionales logran mantener y recombinar un conjunto diverso de soluciones de buena calidad. La aplicación selectiva de BL sobre el 10\% mejor de la población maximiza la eficiencia del presupuesto de evaluaciones, combinando de forma óptima la exploración a gran escala con la intensificación en regiones altamente prometedoras.
+
+
+\subsubsection*{Análisis de outliers}
+
+Los boxplots de las Figuras~\ref{fig:pr3-obligatorios-ibex}--\ref{fig:pr3-obligatorios-sp500}
+muestran comportamientos atípicos que conviene justificar teóricamente:
+\begin{itemize}[noitemsep]
+    \item \textbf{IBEX 35 — outlier superior en BMB:} en una ejecución, el arranque aleatorio
+    inicializó en una cuenca de atracción especialmente favorable; al no tener memoria del mejor
+    anterior (como sí tiene ILS), ese arranque fue explotado hasta el máximo por la BL interna.
+    \item \textbf{IBEX 35 — outliers superiores en ILS-ES:} la combinación del criterio de
+    Metrópolis con la perturbación ILS permitió escapar de valles locales en dos ejecuciones
+    concretas, saltando a cuencas de mayor calidad que no alcanzó ninguna otra técnica.
+    \item \textbf{S\&P 100 — outlier inferior en BMB:} el punto de partida aleatorio cayó en
+    una zona extremadamente pobre del espacio, y los 2000 evaluaciones de BL no fueron suficientes
+    para escapar de ese valle.
+    \item \textbf{S\&P 500 — outlier superior en ES:} en esa ejecución, el esquema de enfriamiento
+    Cauchy modificado encontró por aceptación probabilística una cuenca de calidad inhabitual,
+    demostrando que el criterio de Metrópolis puede —en ocasiones— superar a la explotación pura
+    de BL incluso con muy pocas evaluaciones.
+\end{itemize}
+
+\subsection{Estudio de Eficiencia y Trade-off Calidad/Coste}
+
+A continuación, se presentan de manera individualizada las gráficas que ilustran el compromiso
+entre el fitness alcanzado y el tiempo computacional requerido para cada uno de los tres mercados
+considerados (Figuras~\ref{fig:scatter-tradeoff-ibex}, \ref{fig:scatter-tradeoff-sp100} y
+\ref{fig:scatter-tradeoff-sp500}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/scatter_tradeoff_ibex35.png}
+\caption{Compromiso Calidad--Coste en el mercado IBEX 35 ($n=30$).}
+\label{fig:scatter-tradeoff-ibex}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/scatter_tradeoff_sp100.png}
+\caption{Compromiso Calidad--Coste en el mercado S\&P 100 ($n=97$).}
+\label{fig:scatter-tradeoff-sp100}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/scatter_tradeoff_sp500.png}
+\caption{Compromiso Calidad--Coste en el mercado S\&P 500 ($n=457$).}
+\label{fig:scatter-tradeoff-sp500}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figuras/barchart_p3_comparativa.png}
+\caption{Comparativa directa de fitness (arriba) y tiempo en escala logarítmica (abajo)
+para los algoritmos P3 y BL en los tres mercados.}
+\label{fig:barchart-p3}
+\end{figure}
+
+Las Figuras~\ref{fig:scatter-tradeoff-ibex}--\ref{fig:scatter-tradeoff-sp500} ilustran
+con claridad el trade-off fundamental: ES e ILS-ES ocupan de forma sistemática la zona de
+\textit{bajo tiempo y baja calidad} en dimensiones altas (como en el S\&P 500,
+Figura~\ref{fig:scatter-tradeoff-sp500}), mientras que BMB e ILS se desplazan hacia tiempos
+mayores con calidad notablemente superior. Cabe destacar que el algoritmo Greedy se sitúa, en términos de coste temporal, por debajo de ILS-ES y ES en el IBEX 35, y a un nivel muy similar en el S\&P 100 debido a su naturaleza constructiva directa. En IBEX 35 (Figura~\ref{fig:scatter-tradeoff-ibex}),
+debido a la reducida escala del problema, todos los algoritmos de P3 se agrupan en un rango de coste
+mínimo ($<0.01$ s), por lo que BMB resulta la opción preferible al ofrecer la mejor calidad
+relativa sin penalización temporal apreciable.
+
+La Figura~\ref{fig:barchart-p3} confirma en escala logarítmica que \textbf{ES e ILS-ES son
+entre 3$\times$ y 40$\times$ más rápidos que BMB e ILS} en S\&P 500, pagando ese coste con
+una reducción de calidad de aproximadamente el $18\%$ respecto a BL. Este trade-off clásico
+intensificación-coste justifica la coexistencia de técnicas de trayectoria simple (ES) y múltiple
+(BMB, ILS): dependiendo de los requisitos específicos de la aplicación práctica (optimización en
+tiempo real versus planificación estratégica), resultará adecuado emplear un enfoque u otro. Además, en el caso específico del IBEX 35, la Búsqueda Local (BL) es la técnica iterativa de optimización que menos tiempo consume, convergiendo casi instantáneamente.
+
+
+

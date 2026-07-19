@@ -41,6 +41,8 @@ Estas elecciones persiguen asegurar comparabilidad entre métodos y mantener el 
 
 En esta sección se resumen los resultados globales obtenidos a partir de la ejecución del experimento, mostrando únicamente los algoritmos exigidos en el guion: Greedy, Random, BL, AGG-Arit, AGG-BLX, AGE-Arit, AGE-BLX, AM-All, AM-Rand y AM-Best.
 
+% \textbf{Nota terminológica:} en este informe, las columnas \textit{Fitness(2015--2024)} y \textit{Fitness(2025)} se usan a veces de forma abreviada como ``entrenamiento'' y ``validación'' por analogía experimental. No obstante, no se trata de entrenamiento supervisado de un modelo predictivo, sino de optimización de la asignación de cartera sobre una ventana histórica (2015--2024) y evaluación fuera de muestra en un periodo futuro (2025).
+
 \begin{table}[H]
 \centering
 \caption{Resultados numéricos globales -- IBEX 35}
@@ -140,7 +142,7 @@ A continuación se presentan los boxplots correspondientes a cada mercado para s
 
 \subsection{Análisis de los Algoritmos Genéticos}
 
-En este apartado se comparan las cuatro variantes genéticas puras ---AGG-Arit, AGG-BLX, AGE-Arit y AGE-BLX--- atendiendo a tres ejes: calidad media de las soluciones (fitness en el periodo de 2015--2024), dispersión entre ejecuciones y presencia de valores atípicos. La discusión se apoya en los boxplots de las Figuras~\ref{fig:pr2-obligatorios-ibex},~\ref{fig:pr2-obligatorios-sp100} y~\ref{fig:pr2-obligatorios-sp500}, así como en las tablas globales previamente presentadas, y se articula desde una perspectiva comparativa y porcentual, sin limitarse a una mera lectura de cifras.
+En este apartado se comparan las cuatro variantes genéticas puras ---AGG-Arit, AGG-BLX, AGE-Arit y AGE-BLX--- atendiendo a tres ejes: calidad media de las soluciones (fitness en el periodo de 2015--2024), dispersión entre ejecuciones y presencia de valores atípicos. La discusión se apoya en los boxplots de las Figuras~\ref{fig:pr2-obligatorios-ibex},~\ref{fig:pr2-obligatorios-sp100} y~\ref{fig:pr2-obligatorios-sp500}, así como en las tablas globales previamente presentadas, y se articula desde una perspectiva comparativa y porcentual, sin limitarse a una mera lectura de cifras. Para evitar ambigüedad, la interpretación correcta es \textit{optimización en ventana histórica} frente a \textit{evaluación fuera de muestra}, y no entrenamiento/validación en sentido de aprendizaje automático.
 
 \subsubsection*{Efecto del operador de cruce: Aritmético frente a BLX-$\alpha$}
 
@@ -218,6 +220,53 @@ AM-All, en cambio, exhibe una dispersión comparable a la de las variantes aritm
 \subsubsection*{Síntesis comparativa}
 
 La hibridación con Búsqueda Local mejora a los algoritmos genéticos puros únicamente cuando se aplica de forma selectiva (AM-Rand o AM-Best), logrando mejoras de hasta un 2\,\% en calidad y una reducción sustancial de la variabilidad. Sin embargo, una configuración inadecuada de la anchura de la BL (AM-All) puede resultar contraproducente, degradando el rendimiento por debajo incluso del mejor genético puro, especialmente en mercados de alta dimensión. Este resultado subraya que el diseño de un algoritmo memético exitoso exige una regulación cuidadosa del balance exploración-explotación: la BL debe actuar como un complemento puntual del motor evolutivo, no como su sustituto.
+
+\subsection{Análisis de Eficiencia: Trade-off Tiempo vs Calidad}
+
+Más allá de la mera comparación de fitness, es instructivo examinar la relación entre el coste computacional (tiempo de ejecución) y la calidad de las soluciones obtenidas. Esta perspectiva revela cómo los algoritmos capitalizan su presupuesto de evaluaciones y es especialmente relevante en contextos reales donde el tiempo está limitado o el cálculo es costoso.
+
+Las Figuras~\ref{fig:eficiencia-ibex},~\ref{fig:eficiencia-sp100} y~\ref{fig:eficiencia-sp500} presentan scatter plots que relacionan el tiempo promedio de ejecución (eje horizontal) con el fitness promedio alcanzado (eje vertical) para cada algoritmo en los tres mercados. Cada punto está etiquetado con el nombre del algoritmo y coloreado por categoría: gris para los algoritmos de referencia (Greedy, Random), azul para Búsqueda Local, naranja para los genéticos (AGG/AGE) y verde para los meméticos (AM).
+
+Las observaciones principales que se derivan de este análisis son las siguientes:
+
+\begin{enumerate}
+    \item \textbf{Algoritmos de referencia:} Greedy y Random presentan tiempos negligibles en el IBEX~35 y S\&P~100 (del orden de milisegundos o centésimas de segundo), aunque sus fitness quedan significativamente alejados de los mejores poblacionales. Random en particular exhibe una pésima relación costo-beneficio: su tiempo en S\&P~500 (1.85~s) es comparable al de los algoritmos poblacionales, pero su calidad es dramáticamente inferior. Greedy, por su escasez de evaluaciones (una sola), es prácticamente instantáneo, pero su rendimiento sin conocimiento de estructuras ocultas es mediocre.
+    
+    \item \textbf{Búsqueda Local (BL):} Ocupa una zona intermedia singular. En mercados pequeños (IBEX~35 e incluso S\&P~100), es extremadamente rápida, pero su BL no refina lo suficiente para superar a los mejores poblacionales. En S\&P~500, donde la dimensión es más grande, BL requiere 1.526~s, un tiempo similar al de los poblacionales, pero sin alcanzar su calidad. Esto refleja el carácter aleatorio de la exploración inicial: BL depende mucho de la solución de inicio, lo que en espacios grandes la limita.
+    
+    \item \textbf{Algoritmos Genéticos (AGG/AGE):} Requieren tiempos similares entre sí (del orden de 0.01~s en IBEX~35, 0.07~s en S\&P~100 y 1.5~s en S\&P~500). Todos ellos alcanzan soluciones de buena calidad y presentan una relación costo-beneficio notablemente equilibrada. Las variantes BLX son ligeramente más lentas que las aritméticas, pero la mejora de calidad compensa ampliamente ese coste computacional modesto.
+    
+    \item \textbf{Algoritmos Meméticos (AM):} AM-Rand y AM-Best requieren tiempos prácticamente idénticos a AGG-BLX (marginal sobrecarga por la búsqueda local selectiva) pero alcanzan soluciones de mejor calidad. En el S\&P~500, donde las diferencias se amplían, esta ventaja resulta especialmente apreciable: se invierte un tiempo comparable pero se obtiene un fitness entre un 2\,\% y un 3\,\% superior. AM-All, en cambio, presenta un tiempo ligeramente superior sin que ello redunde en mejora de calidad; de hecho, produce peores soluciones, lo que demuestra que su aplicación indiscriminada de la BL resulta ineficiente.
+\end{enumerate}
+
+\textbf{Conclusión:} Desde una perspectiva pragmática, los algoritmos meméticos selectivos (AM-Rand/Best) representan el óptimo en el espacio de tiempo-calidad: invierten un tiempo apenas superior al de los genéticos puros pero alcanzan una calidad consistentemente mejor. En contextos donde el tiempo sea crítico (ej.: decisiones de portfolio en tiempo real), AGG-BLX ofrece un buen balance; cuando se disponga de tiempo suficiente, AM-Rand o AM-Best son recomendables. AM-All, por el contrario, debe evitarse pues degrada su relación costo-beneficio sin proporcionar ninguna ventaja sobre las alternativas.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.90\textwidth]{figuras/eficiencia_IBEX_35.png}
+\caption{Análisis de eficiencia: Tiempo de ejecución vs Fitness promedio --- IBEX 35. Cada punto representa el promedio de 50 ejecuciones independientes. \textit{Nota:} Los puntos correspondientes a AM-Rand y AM-Best se solapan debido a su práctica identidad en tiempo y fitness.}
+\label{fig:eficiencia-ibex}
+\end{figure}
+
+En el IBEX~35, el tiempo de ejecución es negligible para todos los algoritmos (máximo 0.024~s), lo que refleja la naturaleza de baja dimensionalidad del problema (35 activos). Greedy es instantáneo pero ofrece un fitness mediocre por su falta de exploración global. Random invierte ligeramente más tiempo sin mejorar significativamente la calidad, demostrando la ineficacia de la búsqueda sin estructura en espacios incluso pequeños. Los algoritmos poblacionales (AG y AM) convergen en un rango de fitness superior en torno a un 2--4\,\% mejor que Random, con un coste computacional prácticamente imperceptible. AM-Rand y AM-Best logran la mejor relación costo-beneficio en este mercado: en una fracción de milisegundo alcanzan soluciones de calidad comparable a AGG-BLX.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.90\textwidth]{figuras/eficiencia_SP_100.png}
+\caption{Análisis de eficiencia: Tiempo de ejecución vs Fitness promedio --- S\&P 100. Cada punto representa el promedio de 50 ejecuciones independientes. \textit{Nota:} Múltiples algoritmos meméticos y genéticos presentan tiempos muy similares (0.071--0.075~s) formando un cluster denso.}
+\label{fig:eficiencia-sp100}
+\end{figure}
+
+El S\&P~100 exhibe un patrón más estratificado. Greedy sigue siendo prácticamente instantáneo pero inferior en fitness. Random consume entre 4 y 5 veces más tiempo que Greedy, revelando la sobrecarga de exploración aleatoria, y su calidad apenas mejora. BL requiere más tiempo que Random (0.033~s frente a 0.098~s) pero se sitúa a mitad de camino entre Random y los poblacionales en términos de fitness. Los algoritmos genéticos puros forman un cluster donde AGG-BLX destaca con aproximadamente un 5--7\,\% de mejora sobre Random, mientras que las variantes aritméticas quedan ligeramente por debajo. AM-Rand y AM-Best se sitúan en la frontera de Pareto: requieren un tiempo muy similar a AGG-BLX pero consiguen un fitness entre un 2\,\% y un 4\,\% superior, consolidando su posición como la mejor opción en relación costo-beneficio.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.90\textwidth]{figuras/eficiencia_SP_500.png}
+\caption{Análisis de eficiencia: Tiempo de ejecución vs Fitness promedio --- S\&P 500. Cada punto representa el promedio de 50 ejecuciones independientes. \textit{Nota:} Los algoritmos poblacionales (genéticos y meméticos) forman un cluster muy denso en torno a 1.48--1.54~s de tiempo.}
+\label{fig:eficiencia-sp500}
+\end{figure}
+
+El S\&P~500, con su dimensión de 500 activos, amplifica las diferencias y revela las limitaciones de cada enfoque. Greedy sigue siendo instantáneo pero su calidad es ahora dramáticamente inferior (aproximadamente un 20\,\% peor que los mejores poblacionales). Random consume un tiempo colosal (1.85~s) ---comparable al de los algoritmos poblacionales--- pero no logra ventaja de calidad: permanece en una zona inferior a todos los poblacionales, demostrando el fracaso de la exploración sin estructura en espacios de alta dimensión. BL requiere 1.53~s, un tiempo similar a Random, pero logra mejorar la calidad en aproximadamente un 8--12\,\% respecto a Random, mostrando el poder de la explotación local una vez que se tiene una buena solución inicial. Los algoritmos genéticos puros invierten tiempo comparable a BL (1.48--1.51~s) pero alcanzan una calidad sustancialmente superior, entre un 15\,\% y un 25\,\% mejor que Random, demostrando que la evolución poblacional supera ampliamente a la búsqueda local aislada en espacios grandes. AM-All constituye un outlier negativo: consume tiempo (1.57~s) pero logra un fitness inferior al de AGG-BLX, corroborando que la aplicación indiscriminada de BL es contraproducente. AM-Rand y AM-Best emergen como los claros ganadores: requieren tiempo apenas superior a AGG-BLX (1.54~s) pero alcanzan una calidad entre un 2\,\% y un 3\,\% superior, representando el equilibrio óptimo entre velocidad y precisión en el problema de cartera de alta dimensión.
 
 \subsection{Breve comparación con los algoritmos obligatorios de la práctica 1}
 

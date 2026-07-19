@@ -107,6 +107,12 @@ DE         & -2.717 & -3.885 & 0.019 & 10000 & 1.495 \\
 
 \subsection{Mutación Gaussiana en AGG}
 
+En el contexto del problema de optimización de carteras, la analogía evolutiva se interpreta así: el \textbf{cromosoma} (genotipo) es la solución completa y factible, es decir, el vector total de pesos de inversión; y cada \textbf{gen} es una variable de decisión individual, esto es, el peso asignado a una empresa concreta. Esta distinción es importante porque la mutación por transferencia y la mutación gaussiana actúan con granularidad distinta: la primera se activa con probabilidad por individuo y, cuando ocurre, transfiere capital entre dos genes; la segunda evalúa la perturbación de forma independiente gen a gen.
+
+\begin{quote}
+\textbf{Nota metodológica.} Según la literatura de computación evolutiva y las directrices del guion, en una implementación gaussiana por componentes es habitual definir la probabilidad de mutación a nivel de gen como $P_m/N$ (siendo $N$ el número de genes o dimensión del cromosoma), de modo que la alteración se controle en esperanza matemática. Esta ponderación adaptativa mantiene aproximadamente constante el número medio de perturbaciones por individuo al cambiar la dimensionalidad del espacio de búsqueda. En consecuencia, se preserva un nivel de disrupción comparable tanto en instancias pequeñas (p.ej., IBEX 35) como en instancias grandes (p.ej., S\&P 500), reduciendo el riesgo de que una mutación demasiado agresiva deteriore la estructura de la solución.
+\end{quote}
+
 \subsubsection{Pseudocódigo}
 
 \begin{algorithm}[H]
@@ -189,7 +195,7 @@ En resumen, la mutación gaussiana constituye una mejora clara respecto a la mut
 
 \subsubsection{Pseudocódigo}
 
-\newpage
+
 \scalebox{0.84}{\begin{minipage}{1.19\textwidth}
 \begin{algorithm}[H]
 \SetAlgoLined
@@ -389,7 +395,7 @@ La implementación sigue el esquema clásico \textbf{DE/rand/1/bin}: mutación d
     \item Reparación de factibilidad: se aplica únicamente al vector \textit{trial} tras el cruce, no al vector \textit{donor}, para preservar la geometría del paso diferencial.
 \end{itemize}
 
-Un aspecto notable de la implementación es que el vector \textit{donor} no se repara antes del cruce. Esto es deliberado: la diferencia $(x_{r_1} - x_{r_2})$ actúa como un vector de dirección puro, y recortarla prematuramente alteraría la dinámica adaptativa de DE, en la que el tamaño de paso se autorregula según la dispersión de la población.
+Un aspecto notable de la implementación es que el vector \textit{donor} no se repara antes del cruce. Esto es deliberado: la diferencia $(x_{r_1} - x_{r_2})$ actúa como un vector de dirección puro, y recortarla prematuramente alteraría la dinámica adaptativa de DE, en la que el tamaño de paso se autorregula según la dispersión de la población. En cambio, sí se repara el \textit{trial} tras el cruce binomial porque comprobar únicamente intervalos por componente ($[lo,hi]$) no garantiza la factibilidad global del portfolio: también debe respetarse la restricción de normalización ($\sum_i w_i = 1$) junto con las condiciones de dominio. La llamada a \texttt{fix} sobre el \textit{trial} asegura simultáneamente consistencia local y global antes de evaluar fitness, evitando aceptar candidatos geométricamente válidos por coordenadas pero inviables como cartera completa.
 
 \subsubsection{Análisis de DE}
 
@@ -415,6 +421,61 @@ Los cinco algoritmos extras comparten el mismo presupuesto de 10\,000 evaluacion
 Respecto a las \textbf{búsquedas locales de la Práctica~1} (BL Best y BL Multi), su inclusión como extras tiene un propósito comparativo: evidenciar la brecha entre métodos de trayectoria simple y métodos poblacionales bajo el mismo presupuesto. BL Best, al partir de un único punto y explorar un vecindario de primer mejora, carece de diversificación y queda atrapada en óptimos locales prematuros, especialmente en dimensiones altas. BL Multi mitiga parcialmente este problema mediante reinicios aleatorios, pero la calidad de cada reinicio depende del azar de la inicialización y no hay comunicación entre las distintas trayectorias. En contraste, los tres extras de la Práctica~2 mantienen una población que intercambia información geométrica (vía cruce, mutación diferencial o búsqueda local encadenada), lo que les confiere una exploración estructuralmente más eficiente.
 
 En definitiva, la comparación confirma que los enfoques poblacionales ---y en particular DE y AM-LSCh--- aprovechan mejor el presupuesto de evaluaciones que las búsquedas locales aisladas, y que la ventaja se amplifica a medida que crece la dimensionalidad del problema.
+
+\subsection{Mejoras de Eficiencia y Robustez Técnica}
+
+Como parte del trabajo voluntario, se han implementado una serie de optimizaciones en el núcleo del código para mejorar el rendimiento computacional y la fiabilidad del software. Estas mejoras son especialmente críticas al escalar el problema a mercados de alta dimensionalidad como el S\&P~500.
+
+\subsubsection{Optimización de la Función de Fitness}
+
+La evaluación del fitness es el cuello de botella computacional de cualquier metaheurística poblacional. Originalmente, el cálculo del riesgo (varianza de la cartera) se realizaba mediante un doble bucle sobre todos los activos ($N$), lo que implica una complejidad $O(N^2)$ por evaluación. Dado que las carteras optimizadas suelen ser dispersas (muchos activos con peso cero), se ha optimizado la función \texttt{fitness} para omitir los términos correspondientes a pesos nulos. 
+
+Esta mejora reduce la complejidad efectiva a $O(K^2)$, donde $K$ es el número de activos con inversión real ($K \ll N$ en mercados grandes). En el caso del S\&P~500 ($N=500$), esta optimización permite procesar las 10\,000 evaluaciones en tiempos significativamente inferiores, facilitando ejecuciones más rápidas sin alterar la precisión del cálculo.
+
+\subsubsection{Gestión de Memoria en Búsqueda Local}
+
+En la implementación inicial, cada paso de exploración de la Búsqueda Local (BL) creaba una copia completa del vector de pesos para evaluar a un vecino. En problemas de gran escala, estas asignaciones dinámicas constantes introducen una sobrecarga (overhead) de gestión de memoria. 
+
+Se ha refactorizado el código de \texttt{LocalSearch}, \texttt{LocalSearchBest}, \texttt{LocalSearchMultiStart} y \texttt{SoftLocalSearch} para realizar \textbf{actualizaciones \textit{in-place}}.
+ Ahora, el algoritmo modifica directamente el vector de la solución actual, evalúa el fitness y, solo si no hay mejora, revierte los cambios. Esta técnica elimina miles de copias innecesarias por cada ejecución, lo que se traduce en una reducción de los tiempos de CPU en los tres mercados.
+
+\begin{table}[H]
+\centering
+\caption{Comparativa de tiempos: Informe original vs. Versión optimizada (Ubuntu)}
+\label{tab:comparativa-tiempos-opt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccc}
+\hline
+Algoritmo & Mercado & T. Original (s) & T. Optimizado (s) & Variación (\%) \\
+\hline
+BL & IBEX 35 & 0.001 & 0.001 & 0.00\% \\
+   & S\&P 100 & 0.033 & 0.031 & -6.06\% \\
+   & S\&P 500 & 1.526 & 1.553\textsuperscript{*} & +1.77\% \\
+\hline
+BL Best & IBEX 35 & 0.006 & 0.006 & 0.00\% \\
+        & S\&P 100 & 0.065 & 0.063 & -3.08\% \\
+        & S\&P 500 & 1.439 & 1.423 & -1.11\% \\
+\hline
+BL Multi & IBEX 35 & 0.008 & 0.008 & 0.00\% \\
+         & S\&P 100 & 0.077 & 0.075 & -2.60\% \\
+         & S\&P 500 & 1.603 & 1.562 & -2.56\% \\
+\hline
+AM-Best  & IBEX 35 & 0.009 & 0.009 & 0.00\% \\
+         & S\&P 100 & 0.074 & 0.072 & -2.70\% \\
+         & S\&P 500 & 1.538 & 1.509 & -1.88\% \\
+\hline
+\end{tabular}
+}
+\par\smallskip
+\footnotesize\textsuperscript{*} El ligero incremento en BL S\&P 500 se atribuye a la variabilidad del sistema y carga del SO durante la ejecución, predominando la mejora en el resto de algoritmos.
+\end{table}
+
+\textit{Nota: El desarrollo de la práctica ha sido con el código sin optimizar para añadir aquí esta parte. Como varia poco en tiempo se estima que no habrá mucho cambio en el análisis.}
+
+\subsubsection{Robustez en la Lectura de Configuración}
+
+
+Para mejorar la experiencia de usuario y evitar fallos silenciosos, se ha rediseñado el lector de archivos \texttt{.cfg}. La nueva versión es \textbf{insensible a espacios en blanco} alrededor del signo igual (p.ej., \texttt{SEED = 42} funciona igual que \texttt{SEED=42}) y permite la inclusión de \textbf{comentarios en línea} mediante los caracteres \texttt{\#} o \texttt{;}. Esta robustez asegura que el programa cargue siempre los parámetros deseados en lugar de recurrir a los valores por defecto ante pequeñas variaciones de formato en el fichero de configuración.
 
 \subsection{Anotaciones sobre la Parametrización}
 

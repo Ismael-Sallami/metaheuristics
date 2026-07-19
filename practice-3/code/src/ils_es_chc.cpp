@@ -2,6 +2,7 @@
 #include "random.hpp"
 #include <cmath>
 #include <algorithm>
+#include <numeric>
 
 using namespace std;
 
@@ -12,14 +13,14 @@ void ILSES_CHC::mutate(tSolution<double>& sol, double rate) {
     // Select num_mut assets at random
     vector<size_t> indices(n);
     iota(indices.begin(), indices.end(), 0);
-    random_shuffle(indices.begin(), indices.end());
+    Random::shuffle(indices);
     
     // Shuffle the weights of the num_mut selected assets
     vector<double> weights;
     for (int i = 0; i < num_mut; i++) {
         weights.push_back(sol[indices[i]]);
     }
-    random_shuffle(weights.begin(), weights.end());
+    Random::shuffle(weights);
     for (int i = 0; i < num_mut; i++) {
         sol[indices[i]] = weights[i];
     }

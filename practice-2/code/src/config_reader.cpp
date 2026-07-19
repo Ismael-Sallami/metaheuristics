@@ -56,6 +56,20 @@ Config ConfigReader::read(const std::string& filename) {
         std::string key, value;
         
         if (std::getline(ss, key, '=') && std::getline(ss, value)) {
+            // Strip potential inline comments from the value
+            size_t comment_pos = value.find_first_of("#;");
+            if (comment_pos != std::string::npos) {
+                value = value.substr(0, comment_pos);
+            }
+
+            // Trim whitespace from both ends of key and value for robustness.
+            auto trim = [](std::string& s) {
+                s.erase(0, s.find_first_not_of(" \t\r\n"));
+                s.erase(s.find_last_not_of(" \t\r\n") + 1);
+            };
+            trim(key);
+            trim(value);
+
             // Map each key to its corresponding config value
             if (key == "SEED") config.seed = std::stol(value);
             else if (key == "MAX_EVALUATIONS") config.max_evaluations = std::stoi(value);

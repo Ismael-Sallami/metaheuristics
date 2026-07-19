@@ -1,0 +1,269 @@
+%% ============================================================
+%%  PARTE 4 — Mejoras sobre el LCA base
+%%  Hasta 1.5 puntos
+%% ============================================================
+
+\newpage
+\section{Parte IV: Mejoras sobre el Diseño del LCA}
+\label{sec:parte4}
+
+\subsection{Motivación}
+
+El análisis experimental de las Partes II y III ha revelado dos limitaciones
+principales del LCA base que conviene abordar:
+
+\begin{enumerate}
+  \item \textbf{Convergencia prematura en funciones multimodales complejas}: el parámetro
+    $\zeta = t/T$ favorece la explotación al final de la búsqueda, pero no contempla
+    mecanismos de reinicio cuando la población se estanca.
+  \item \textbf{Búsqueda de solución única}: el LCA fue diseñado para retornar una única
+    solución óptima, sin explotar la multimodalidad de los problemas.
+\end{enumerate}
+
+Para abordar estas limitaciones, se proponen dos líneas de mejora con sustento
+teórico y experimental:
+
+\begin{description}
+  \item[Mejora A:] Control dinámico de la diversidad mediante un esquema inspirado en
+    \textbf{CHC} (reinicio adaptativo de la población cuando se detecta convergencia prematura).
+  \item[Mejora B:] Extensión multimodal del LCA mediante \textbf{técnicas de nicho}
+    (\emph{fitness sharing} y \emph{crowding determinista}).
+\end{description}
+
+\subsection{Mejora A: LCA-CHC — Control dinámico de la diversidad}
+
+\subsubsection{Fundamento}
+
+El algoritmo \textbf{CHC} (Cross-generational elitist selection, Heterogeneous recombination,
+Cataclysmic mutation) de Eshelman \cite{eshelman1991chc} introduce un \textbf{reinicio
+catastrófico} de la población cuando la búsqueda se estanca: se preserva el élite y se
+regenera el resto, inyectando diversidad para escapar de la convergencia prematura.
+
+En el contexto del LCA se adapta este principio mediante un \textbf{detector de estancamiento}:
+se cuenta el número de iteraciones consecutivas en las que la mejor solución global
+$X_{\text{best}}$ no mejora. Cuando ese contador alcanza un umbral de paciencia $P$, se
+dispara el cataclismo: se conservan los $e$ mejores individuos (élite) y los $N-e$ restantes
+se \textbf{re-aleatorizan por completo en todo el dominio} $[lb,ub]^D$, tras lo cual el
+contador se reinicia. Este disparador basado en el progreso del \emph{fitness} es más robusto
+que un umbral sobre la distancia euclidiana media al centroide, cuya escala depende
+fuertemente de la dimensión y del rango del problema y que, en la práctica, no llegaba a
+activarse en el régimen de CEC2017.
+
+\begin{algorithm}[H]
+\caption{LCA-CHC: LCA con reinicio catastrófico por estancamiento}
+\label{alg:lcachc}
+\begin{algorithmic}[1]
+\Require $N$, $T$, $lb$, $ub$, $P$ (paciencia), $e$ (tamaño del élite)
+\Ensure $X_{\text{best}}$
+\State Inicializar con ROBL; evaluar fitness; $\text{sin\_mejora} \leftarrow 0$
+\For{$t = 1$ \textbf{to} $T$}
+  \State Ejecutar una generación del LCA (Algoritmo~\ref{alg:lca})
+  \If{$X_{\text{best}}$ mejora en esta iteración}
+    \State $\text{sin\_mejora} \leftarrow 0$
+  \Else
+    \State $\text{sin\_mejora} \leftarrow \text{sin\_mejora} + 1$
+  \EndIf
+  \If{$\text{sin\_mejora} \geq P$} \Comment{estancamiento detectado}
+    \State Conservar los $e$ mejores individuos (élite)
+    \State Re-aleatorizar los $N-e$ restantes en $[lb,ub]^D$
+    \State Evaluar individuos reiniciados; $\text{sin\_mejora} \leftarrow 0$
+  \EndIf
+\EndFor
+\State \Return $X_{\text{best}}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Parámetros}
+
+\begin{table}[h!]
+\centering
+\caption{Parámetros del LCA-CHC}
+\label{tab:params_chc}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Parámetro} & \textbf{Valor} & \textbf{Descripción} \\
+\midrule
+$N$ & 30 & Tamaño de la población \\
+$P$ & 50 & Paciencia: iteraciones sin mejora que disparan el reinicio \\
+$e$ & 5  & Número de élite preservados en el reinicio \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Implementación}
+
+El detector de estancamiento (contador de iteraciones sin mejora de
+$X_{\text{best}}$) y el reinicio catastrófico ---preservación del élite y
+re-aleatorización del resto de la población en todo el dominio--- se implementan
+en \texttt{testlcachc.cc}.
+
+\subsection{Mejora B: LCA Multimodal — Búsqueda de múltiples soluciones}
+
+\subsubsection{Motivación}
+
+Muchos problemas de optimización reales son \textbf{multimodales}: tienen múltiples
+óptimos locales y globales de calidad similar. Una metaheurística que devuelva
+únicamente la mejor solución encontrada pierde información valiosa sobre la estructura
+del espacio de búsqueda. La extensión multimodal del LCA permite obtener un conjunto
+de soluciones de alta calidad y diversas.
+
+\subsubsection{Técnica de nicho aplicada: \emph{Crowding} determinista}
+
+Se adopta el \textbf{crowding determinista} \cite{mahfoud1995niching}: cuando se genera
+un individuo hijo, este compite únicamente contra el individuo padre más similar de la
+población (en lugar de contra el padre directo). Esto mantiene la diversidad al evitar
+que los mejores individuos dominen completamente la población.
+
+\begin{equation}
+  \text{Competidor}(h) = \arg\min_{i \in \text{Pop}} \|\mathbf{h} - \mathbf{x}_i\|_2
+  \label{eq:crowding}
+\end{equation}
+
+Si el hijo $\mathbf{h}$ mejora al competidor, lo reemplaza en la población.
+
+\begin{algorithm}[H]
+\caption{LCA Multimodal con Crowding Determinista}
+\label{alg:lcamulti}
+\begin{algorithmic}[1]
+\Require $N$, $T$, $lb$, $ub$
+\Ensure Conjunto de soluciones diversas de alta calidad
+\State Inicializar con ROBL; evaluar fitness
+\For{$t = 1$ \textbf{to} $T$}
+  \State $\zeta \leftarrow t/T$
+  \For{cada agente $i \in [1, N]$}
+    \State Generar hijo $\mathbf{h}$ mediante operadores del LCA
+    \State $c \leftarrow \arg\min_{j} \|\mathbf{h} - \mathbf{x}_j\|_2$ \Comment{Crowding: buscar más similar}
+    \If{$fit(\mathbf{h}) < fit(\mathbf{x}_c)$}
+      \State $\mathbf{x}_c \leftarrow \mathbf{h}$; $fit_c \leftarrow fit(\mathbf{h})$ \Comment{reemplazar competidor}
+    \EndIf
+  \EndFor
+\EndFor
+\State Extraer el conjunto de soluciones con $fit < \tau$ (umbral de calidad)
+\State \Return Conjunto de soluciones diversas
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Implementación del crowding}
+
+La selecci\'on por crowding determinista (competici\'on del hijo contra el individuo m\'as similar de la poblaci\'on) se implementa en \texttt{testlcamulti.cc}.
+
+\subsection{Estudio experimental de las mejoras}
+
+La Tabla~\ref{tab:comp_mejoras} recoge el error medio de las cuatro variantes (LCA base,
+LCA-SW, LCA-CHC y LCA-Multi) sobre una selección de funciones para $D=10$, y la
+Tabla~\ref{tab:mejoras_friedman} resume los rankings de Friedman y los tests de Wilcoxon
+frente al LCA base en las tres dimensiones (31 ejecuciones por celda).
+
+\begin{table}[h!]
+\centering
+\caption{Error medio de las cuatro variantes ($D=10$, 31 ejecuciones)}
+\label{tab:comp_mejoras}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Función} & \textbf{LCA base} & \textbf{LCA-SW} & \textbf{LCA-CHC} & \textbf{LCA-Multi} \\
+\midrule
+F01 (Unimodal)   & 2.122e+09 & \textbf{4.659e+02} & 2.119e+09 & 1.764e+09 \\
+F04 (Multimodal) & 4.711e+01 & \textbf{1.831e+00} & 4.712e+01 & 3.084e+01 \\
+F10 (Multimodal) & 7.532e+02 & \textbf{5.018e+02} & 7.527e+02 & 7.119e+02 \\
+F15 (Híbrida)    & 3.260e+02 & 2.814e+02 & \textbf{2.204e+02} & 2.606e+02 \\
+F20 (Híbrida)    & 7.234e+01 & \textbf{5.961e+01} & 7.115e+01 & 6.860e+01 \\
+F25 (Compuesta)  & 4.994e+02 & \textbf{4.224e+02} & 4.994e+02 & 4.853e+02 \\
+F30 (Compuesta)  & 1.426e+05 & \textbf{5.845e+04} & 1.426e+05 & 1.502e+05 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La Figura~\ref{fig:conv_variants} muestra la convergencia de las cuatro variantes sobre F1
+(unimodal, $D=30$), donde las diferencias de diseño se aprecian con claridad.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.75\textwidth]{figuras/conv_variants.png}
+\caption{Convergencia del error medio (escala log.) en F1 ($D=30$) para el LCA base y sus
+tres variantes. LCA-SW (azul) cae unos 8 órdenes de magnitud gracias a la búsqueda local;
+LCA-CHC y LCA-Multi se mantienen junto al LCA base en esta función \emph{unimodal}, donde el
+reinicio catastrófico ---aunque se dispara--- no consigue superar al élite ya estancado.}
+\label{fig:conv_variants}
+\end{figure}
+
+La gráfica resume visualmente la conclusión principal: la curva de \textbf{LCA-SW} se
+desploma desde las primeras evaluaciones mientras las demás permanecen estancadas en la parte
+alta. En F1 (unimodal) el reinicio de \textbf{LCA-CHC} no logra despegarse del LCA base
+---re-aleatorizar individuos rara vez bate al élite en una cuenca única---, pero su efecto sí
+aflora en funciones multimodales e híbridas (p.\,ej.\ F15, donde reduce el error de $326$ a
+$220$, Tabla~\ref{tab:comp_mejoras}). \textbf{LCA-Multi} se despega ligeramente, coherente con
+su mejora modesta y dependiente de la función.
+
+\begin{table}[h!]
+\centering
+\caption{Ranking de Friedman (4 variantes, 30 funciones) y Wilcoxon frente al LCA base}
+\label{tab:mejoras_friedman}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Variante / métrica} & \textbf{$D=10$} & \textbf{$D=30$} & \textbf{$D=50$} \\
+\midrule
+Friedman LCA base   & 3.05 & 3.13 & 2.90 \\
+Friedman LCA-SW     & \textbf{1.53} & \textbf{1.10} & \textbf{1.17} \\
+Friedman LCA-CHC    & 2.95 & 3.43 & 3.33 \\
+Friedman LCA-Multi  & 2.47 & 2.33 & 2.60 \\
+\midrule
+Wilcoxon SW vs.\ base    & $0.0005$ ($+$) & $<10^{-4}$ ($+$) & $<10^{-4}$ ($+$) \\
+Wilcoxon CHC vs.\ base   & $0.210$ ($=$)  & $0.133$ ($=$)   & $0.123$ ($=$)   \\
+Wilcoxon Multi vs.\ base & $0.024$ ($+$)  & $0.012$ ($+$)   & $0.304$ ($=$)   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Discusión general de las mejoras}
+
+El estudio en las tres dimensiones revela comportamientos coherentes con el diseño de cada
+variante:
+
+\paragraph{LCA-CHC (Control de Diversidad): mecanismo activo de efecto neutro.}
+Con el disparador por estancamiento (paciencia $P=50$), el reinicio catastrófico \emph{sí se
+activa} a lo largo de la búsqueda, y el LCA-CHC deja de ser idéntico al LCA base: su ranking
+de Friedman difiere ($2.95$ en $D=10$, $3.43$ en $D=30$, $3.33$ en $D=50$ frente al $3.05$,
+$3.13$ y $2.90$ del base). Sin embargo, la diferencia \textbf{no es estadísticamente
+significativa} en ninguna dimensión (Wilcoxon $p=0.21$, $0.13$, $0.12$). El balance es mixto:
+en $D=10$ el reinicio ayuda ligeramente y en funciones híbridas concretas es claramente
+beneficioso ---en F15 reduce el error de $326$ a $220$, mejorando incluso a LCA-SW y
+LCA-Multi---, pero en dimensión alta re-aleatorizar a los no-élite suele desperdiciar
+evaluaciones, ya que los individuos reiniciados rara vez superan al élite antes de agotarse el
+presupuesto. La conclusión es que el reinicio catastrófico, por sí solo, no ataca el verdadero
+cuello de botella del LCA (la explotación local): inyecta diversidad pero el algoritmo carece
+de un refinamiento que la convierta en mejora sostenida. Esto vuelve a señalar la hibridación
+local (LCA-SW) como la vía correcta.
+
+\paragraph{LCA-Multi (Crowding Determinista): mejora modesta y dependiente de la dimensión.}
+La variante multimodal mejora al LCA base de forma significativa en $D=10$ ($p=0.024$) y
+$D=30$ ($p=0.012$), pero la diferencia deja de ser significativa en $D=50$ ($p=0.30$). El
+crowding mantiene nichos diversos, lo que resulta ventajoso en funciones híbridas (p.\,ej.\
+F15, donde baja de $326$ a $261$), pero al repartir la presión selectiva no logra grandes
+mejoras sobre el óptimo único y en alta dimensión su efecto se diluye. Su valor real es
+cualitativo: devuelve un \textbf{conjunto de soluciones diversas} en lugar de una sola.
+
+\paragraph{LCA-SW: la mejora decisiva.}
+La hibridación memética es, con diferencia, la mejora más efectiva (ranking $\approx 1.1$--$1.5$,
+significativa en todas las dimensiones). Confirma que el cuello de botella del LCA es la
+explotación local, no la exploración.
+
+\paragraph{Resumen comparativo.}
+\begin{itemize}
+  \item \textbf{LCA-SW} es la mejor opción para precisión de objetivo único, gracias a su
+        explotación local.
+  \item \textbf{LCA-CHC} activa el reinicio por estancamiento e inyecta diversidad
+        (beneficioso en funciones híbridas como F15), pero su efecto global es neutro
+        ($p>0.1$): sin explotación local, la diversidad no se traduce en mejora sostenida.
+  \item \textbf{LCA-Multi} aporta mejoras moderadas en baja/media dimensión y, sobre todo,
+        diversidad de soluciones, a costa de algo de precisión en el óptimo global.
+\end{itemize}
+
+Esta divergencia de rendimientos ilustra el teorema del \emph{No Free Lunch}: no hay una
+variante superior en todos los escenarios; cada mejora ajusta el balance
+exploración--explotación a un objetivo distinto, y la elección depende de la tipología del
+problema.

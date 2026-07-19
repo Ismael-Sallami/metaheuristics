@@ -48,26 +48,32 @@ ResultMH<double> LocalSearchBest::optimize(Problem<double> &problem, int maxeval
             if (current_sol[i] == 0.0) continue;
 
             double transfer = current_sol[i] * m_ratio;
-            double new_i = current_sol[i] - transfer;
-            double new_j = current_sol[j] + transfer;
+            const double old_val_i = current_sol[i];
+            const double old_val_j = current_sol[j];
+            double new_i = old_val_i - transfer;
+            double new_j = old_val_j + transfer;
 
             bool valid_i = (new_i < 1e-8) || (new_i >= lo && new_i <= hi);
             bool valid_j = (new_j < 1e-8) || (new_j >= lo && new_j <= hi);
 
             if (!valid_i || !valid_j) continue;
 
-            tSolution<double> neighbor = current_sol;
-            neighbor[i] = (new_i < 1e-8) ? 0.0 : new_i; 
-            neighbor[j] = (new_j < 1e-8) ? 0.0 : new_j;
+            // Apply move in-place to avoid vector allocation
+            current_sol[i] = (new_i < 1e-8) ? 0.0 : new_i; 
+            current_sol[j] = (new_j < 1e-8) ? 0.0 : new_j;
 
-            tFitness neighbor_fitness = problem.fitness(neighbor);
+            tFitness neighbor_fitness = problem.fitness(current_sol);
             evals++;
 
             // Keep the best neighbor found in this iteration
             if (neighbor_fitness > best_neighbor_fitness) {
                 best_neighbor_fitness = neighbor_fitness;
-                best_neighbor_solution = neighbor;
+                best_neighbor_solution = current_sol;
             }
+
+            // Restore state
+            current_sol[i] = old_val_i;
+            current_sol[j] = old_val_j;
         }
 
         // Check if the best neighbor is better than the current solution
