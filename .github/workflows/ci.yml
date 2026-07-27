@@ -1,0 +1,25 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # practice-3 is missing its common/ headers, see the README. It is left out
+        # on purpose instead of patching what was handed in.
+        practice: [practice-1, practice-2, practice-4]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S src/${{ matrix.practice }} -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
