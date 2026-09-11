@@ -10,7 +10,7 @@ the same evaluation budget.
 
 ## Context
 
-Coursework for **Metaheurísticas**, year 4 of the double degree in Computer Science and
+Coursework for **Metaheuristics**, year 4 of the double degree in Computer Science and
 Business Administration, University of Granada (2025-26). Solo work.
 
 ## The problem
